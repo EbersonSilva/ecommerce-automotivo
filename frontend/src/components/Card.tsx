@@ -30,7 +30,7 @@ export const Card = ({ product, onAddToCart }: CardProps) => {
           <img
             src={product.image}
             alt={product.name}
-            className="object-contain w-32 h-32 opacity-90 group-hover:opacity-100 transition-opacity"
+            className="object-contain w-full h-full opacity-90 group-hover:opacity-100 transition-opacity"
           />
         </div>
 

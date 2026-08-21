@@ -5,6 +5,13 @@ import { Card } from '../../components/Card'
 import { Wrench, Disc, Settings, AlertTriangle, ArrowRight, ShieldCheck, Truck, RotateCcw } from 'lucide-react'
 
 export const Home: React.FC = () => {
+  const heroImages = [
+    'https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=900&q=80',
+    'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=900&q=80',
+  ]
+  const [heroImage] = React.useState(() => heroImages[Math.floor(Math.random() * heroImages.length)])
+
   // Mock adding to cart with a simple local storage push
   const handleAddToCart = (productId: string) => {
     try {
@@ -39,6 +46,7 @@ export const Home: React.FC = () => {
   const featuredProducts = activeProducts.slice(0, 4)
   const bestSellers = activeProducts.slice(2, 6)
 
+  // Define as categorias de produtos com ícones e cores
   const categories = [
     { name: 'Freios', icon: Disc, count: 2, color: 'from-blue-500 to-cyan-500' },
     { name: 'Filtros', icon: Settings, count: 2, color: 'from-emerald-500 to-teal-500' },
@@ -48,16 +56,16 @@ export const Home: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-16">
-      {/* Hero Banner */}
+      {/* Banner  */}
       <section className="relative rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 p-8 md:p-16 flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl">
-        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-transparent pointer-events-none" />
-        {/* Glow decoration */}
+        <div className="absolute inset-0 bg-linear-to-r from-indigo-500/10 via-purple-500/10 to-transparent pointer-events-none" />
+        {/* */}
         <div className="absolute -top-24 -left-24 w-80 h-80 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none -z-10" />
         
         <div className="flex-1 text-left relative z-10">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs font-bold text-indigo-400 mb-6">
+          {/* <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs font-bold text-indigo-400 mb-6">
             Especialistas em Performance
-          </span>
+          </span> */}
           <h1 className="text-4xl md:text-5xl font-black text-white leading-tight tracking-tight mb-4">
             Encontre a Peça Perfeita para o Seu Veículo
           </h1>
@@ -67,7 +75,7 @@ export const Home: React.FC = () => {
           <div className="flex flex-wrap gap-4">
             <Link
               to="/produtos"
-              className="px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white font-bold text-sm hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2"
+              className="px-6 py-3 rounded-xl b bg-indigo-500 text-white font-bold text-sm hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2"
             >
               Explorar Catálogo
               <ArrowRight className="w-4 h-4" />
@@ -82,13 +90,11 @@ export const Home: React.FC = () => {
         </div>
 
         {/* Hero Image Mock/Visual Graphic */}
-        <div className="flex-1 max-w-sm w-full aspect-square bg-gradient-to-br from-slate-950 to-slate-900 border border-slate-800 rounded-2xl flex flex-col justify-center items-center relative p-8 shadow-inner">
-          <div className="h-28 w-28 rounded-full bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white text-3xl font-black shadow-lg shadow-indigo-500/30 mb-6 animate-pulse">
-            ⚙️
-          </div>
-          <div className="text-center">
-            <h3 className="text-base font-bold text-slate-100 mb-1">Peças 100% Originais</h3>
-            <p className="text-xs text-slate-400">Distribuidor Autorizado das Maiores Marcas</p>
+        <div className="flex-1 max-w-sm w-full aspect-square bg-linear-to-br from-slate-950 to-slate-900 border border-slate-800 rounded-2xl flex flex-col justify-center items-center relative p-4 shadow-inner overflow-hidden">
+          <img src={heroImage} alt="Peças automotivas" className="w-full h-full object-cover rounded-2xl" />
+          <div className="absolute inset-x-4 bottom-4 rounded-xl bg-slate-950/70 backdrop-blur-sm border border-white/10 px-4 py-3">
+            <h3 className="text-sm font-bold text-slate-100 mb-1">Peças 100% Originais</h3>
+            <p className="text-[11px] text-slate-300">Distribuidor Autorizado das Maiores Marcas</p>
           </div>
         </div>
       </section>
@@ -130,7 +136,7 @@ export const Home: React.FC = () => {
                 to={`/produtos?category=${cat.name}`}
                 className="group p-6 bg-slate-900/50 hover:bg-slate-900 border border-slate-900/80 hover:border-slate-800 rounded-2xl flex flex-col items-center justify-center gap-4 transition-all duration-300 text-center hover:shadow-lg hover:shadow-indigo-500/5"
               >
-                <div className={`p-4 rounded-full bg-gradient-to-tr ${cat.color} bg-opacity-20 flex items-center justify-center text-white shadow-md shadow-slate-950`}>
+                <div className={`p-4 rounded-full bg-linear-to-tr ${cat.color} bg-opacity-20 flex items-center justify-center text-white shadow-md shadow-slate-950`}>
                   <Icon className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -171,7 +177,7 @@ export const Home: React.FC = () => {
       </section>
 
       {/* Banner Secundário (Promo) */}
-      <section className="rounded-3xl bg-gradient-to-r from-purple-900/40 via-pink-900/20 to-slate-950 border border-purple-500/20 p-8 md:p-12 flex flex-col sm:flex-row items-center justify-between gap-6 text-left relative overflow-hidden">
+      <section className="rounded-3xl bg-linear-to-r from-purple-900/40 via-pink-900/20 to-slate-950 border border-purple-500/20 p-8 md:p-12 flex flex-col sm:flex-row items-center justify-between gap-6 text-left relative overflow-hidden">
         {/* Glow decoration */}
         <div className="absolute top-1/2 right-10 -translate-y-1/2 w-48 h-48 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
         

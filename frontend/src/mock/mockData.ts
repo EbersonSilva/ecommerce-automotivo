@@ -73,7 +73,7 @@ export const mockProducts: Product[] = [
     minStock: 5,
     status: 'Ativo',
     description: 'Pastilha de freio de cerâmica de alta performance, proporcionando frenagens mais silenciosas e menor emissão de poeira nas rodas.',
-    image: partSvg('3b82f6'), // Blue
+    image: '/products/pastilha-freio.webp',
     compatibility: ['Civic 2016-2021', 'Corolla 2018-2022', 'Cruze 2017-2023']
   },
   {
