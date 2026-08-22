@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { mockExchanges } from '../../mock/mockData'
+import { mockExchanges, mockOrders } from '../../mock/mockData'
 import type { Exchange } from '../../mock/mockData'
 import { Table } from '../../components/ui/Table'
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
@@ -23,7 +23,7 @@ export const Exchanges = () => {
     loadExchanges()
   }, [])
 
-  const handleAction = (exchangeId: string, nextStatus: 'Aprovado' | 'Recusado') => {
+  const handleAction = (exchangeId: string, nextStatus: Exchange['status']) => {
     try {
       const savedCustom = localStorage.getItem('custom-exchanges')
       const customList: Exchange[] = savedCustom ? JSON.parse(savedCustom) : []
@@ -39,19 +39,62 @@ export const Exchanges = () => {
           return ex
         })
         localStorage.setItem('custom-exchanges', JSON.stringify(updatedCustom))
-        updatedExchanges = [...updatedCustom, ...mockExchanges]
+        const customIds = updatedCustom.map(ex => ex.id)
+        updatedExchanges = [...updatedCustom, ...mockExchanges.filter(ex => !customIds.includes(ex.id))]
       } else {
-        // Update mock items in local state
-        updatedExchanges = exchanges.map((ex) => {
-          if (ex.id === exchangeId) {
-            return { ...ex, status: nextStatus }
+        // Clone mock item and put in custom
+        const mockItem = mockExchanges.find(ex => ex.id === exchangeId)
+        if (mockItem) {
+          const newItem = { ...mockItem, status: nextStatus }
+          const updatedCustom = [newItem, ...customList]
+          localStorage.setItem('custom-exchanges', JSON.stringify(updatedCustom))
+          const customIds = updatedCustom.map(ex => ex.id)
+          updatedExchanges = [...updatedCustom, ...mockExchanges.filter(ex => !customIds.includes(ex.id))]
+        } else {
+          updatedExchanges = exchanges
+        }
+      }
+      
+      // LOGIC: If nextStatus is 'TROCA PROCESSADA', automatically generate a coupon!
+      if (nextStatus === 'TROCA PROCESSADA') {
+        const currentExchange = updatedExchanges.find(ex => ex.id === exchangeId)
+        if (currentExchange) {
+          // Find order to calculate value (or generate R$ 150.00 mock value if not found)
+          let couponValue = 150.00
+          try {
+            const savedOrders = localStorage.getItem('custom-orders')
+            const ordersList = savedOrders ? JSON.parse(savedOrders) : []
+            const order = ordersList.find((o: any) => o.id === currentExchange.orderId) || mockOrders.find(o => o.id === currentExchange.orderId)
+            if (order) {
+              const item = order.items.find((i: any) => i.name === currentExchange.product)
+              if (item) {
+                couponValue = item.price * item.quantity
+              }
+            }
+          } catch (e) {
+            console.error(e)
           }
-          return ex
-        })
+
+          // Generate coupon
+          const newCoupon = {
+            id: `CUP-${Math.floor(1000 + Math.random() * 9000)}`,
+            code: `TROCA-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
+            type: 'Troca' as const,
+            value: couponValue,
+            status: 'Ativo' as const,
+            description: `Cupom de troca gerado a partir da troca ${exchangeId} (Pedido ${currentExchange.orderId})`,
+            customerId: '1' // Carlos Henrique Silva
+          }
+
+          const savedCoupons = localStorage.getItem('custom-coupons')
+          const couponsList = savedCoupons ? JSON.parse(savedCoupons) : []
+          couponsList.unshift(newCoupon)
+          localStorage.setItem('custom-coupons', JSON.stringify(couponsList))
+        }
       }
       
       setExchanges(updatedExchanges)
-      alert(`Solicitação de devolução ${exchangeId} foi "${nextStatus}"!`)
+      alert(`Solicitação de devolução ${exchangeId} foi alterada para "${nextStatus}"!`)
     } catch (err) {
       console.error(err)
     }
@@ -92,31 +135,65 @@ export const Exchanges = () => {
                 </Badge>
               </td>
               <td className="px-6 py-4 flex gap-1.5 justify-start">
-                {ex.status === 'Pendente' ? (
+                {ex.status === 'TROCA SOLICITADA' && (
                   <>
                     <Button
-                      onClick={() => handleAction(ex.id, 'Aprovado')}
+                      onClick={() => handleAction(ex.id, 'TROCA ACEITA')}
                       variant="primary"
                       size="sm"
-                      className="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 hover:shadow-emerald-500/10 text-white font-bold flex items-center gap-1 text-[11px]"
-                      title="Aprovar Devolução"
+                      className="px-2 py-1 bg-emerald-650 hover:bg-emerald-600 text-white font-bold flex items-center gap-1 text-[10px]"
+                      title="Aprovar Troca"
                     >
-                      <Check className="w-3.5 h-3.5" />
-                      Aprovar
+                      <Check className="w-3 h-3" />
+                      Aceitar
                     </Button>
                     <Button
-                      onClick={() => handleAction(ex.id, 'Recusado')}
+                      onClick={() => handleAction(ex.id, 'TROCA NEGADA')}
                       variant="danger"
                       size="sm"
-                      className="px-2 py-1 flex items-center gap-1 text-[11px]"
-                      title="Recusar Devolução"
+                      className="px-2 py-1 flex items-center gap-1 text-[10px]"
+                      title="Recusar Troca"
                     >
-                      <X className="w-3.5 h-3.5" />
-                      Recusar
+                      <X className="w-3 h-3" />
+                      Negar
                     </Button>
                   </>
-                ) : (
-                  <span className="text-[10px] text-slate-500 font-semibold uppercase">Decidido</span>
+                )}
+
+                {ex.status === 'ITEM ENVIADO' && (
+                  <Button
+                    onClick={() => handleAction(ex.id, 'ITEM RECEBIDO')}
+                    variant="primary"
+                    size="sm"
+                    className="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold flex items-center gap-1 text-[10px]"
+                    title="Confirmar Recebimento"
+                  >
+                    <Check className="w-3 h-3" />
+                    Receber Item
+                  </Button>
+                )}
+
+                {ex.status === 'ITEM RECEBIDO' && (
+                  <Button
+                    onClick={() => handleAction(ex.id, 'TROCA PROCESSADA')}
+                    variant="primary"
+                    size="sm"
+                    className="px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-1 text-[10px]"
+                    title="Processar Troca e Gerar Cupom"
+                  >
+                    <Check className="w-3 h-3" />
+                    Processar
+                  </Button>
+                )}
+
+                {ex.status === 'TROCA ACEITA' && (
+                  <span className="text-[10px] text-indigo-400 font-bold uppercase">Aguardando Envio</span>
+                )}
+                {ex.status === 'TROCA NEGADA' && (
+                  <span className="text-[10px] text-rose-500 font-bold uppercase">Negada</span>
+                )}
+                {ex.status === 'TROCA PROCESSADA' && (
+                  <span className="text-[10px] text-emerald-450 font-bold uppercase">Concluída / Cupom Gerado</span>
                 )}
               </td>
             </tr>

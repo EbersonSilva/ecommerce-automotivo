@@ -30,9 +30,9 @@ export const Badge: React.FC<BadgeProps> = ({
 
 export const getStatusVariant = (status: string): BadgeVariant => {
   const norm = status.toLowerCase()
-  if (['pago', 'pagamento realizado', 'entregue', 'ativo', 'aprovado', 'sucesso', 'normal'].includes(norm)) return 'success'
+  if (['pago', 'pagamento realizado', 'entregue', 'ativo', 'aprovado', 'sucesso', 'normal', 'troca aceita', 'troca processada'].includes(norm)) return 'success'
   if (['pendente', 'em aberto', 'alerta', 'troca solicitada'].includes(norm)) return 'warning'
-  if (['cancelado', 'inativo', 'recusado', 'esgotado', 'baixo'].includes(norm)) return 'error'
-  if (['enviado', 'em trânsito', 'em transito', 'em processamento', 'processando'].includes(norm)) return 'info'
+  if (['cancelado', 'inativo', 'recusado', 'esgotado', 'baixo', 'troca negada'].includes(norm)) return 'error'
+  if (['enviado', 'em trânsito', 'em transito', 'em processamento', 'processando', 'item enviado', 'item recebido'].includes(norm)) return 'info'
   return 'neutral'
 }

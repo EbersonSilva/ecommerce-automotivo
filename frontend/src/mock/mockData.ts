@@ -54,8 +54,50 @@ export interface Exchange {
   product: string
   requestDate: string
   reason: string
-  status: 'Pendente' | 'Aprovado' | 'Recusado'
+  status: 'TROCA SOLICITADA' | 'TROCA ACEITA' | 'TROCA NEGADA' | 'ITEM ENVIADO' | 'ITEM RECEBIDO' | 'TROCA PROCESSADA'
 }
+
+export interface Coupon {
+  id: string
+  code: string
+  type: 'Troca' | 'Promocional'
+  value: number
+  status: 'Ativo' | 'Utilizado' | 'Expirado'
+  description: string
+  customerId: string
+}
+
+export const mockCoupons: Coupon[] = [
+  {
+    id: 'CUP-0001',
+    code: 'BEMVINDO10',
+    type: 'Promocional',
+    value: 10.00,
+    status: 'Ativo',
+    description: 'Cupom de boas-vindas do e-commerce',
+    customerId: '1'
+  }
+]
+
+export interface CreditCard {
+  id: string
+  holder: string
+  number: string
+  expiry: string
+  cvv: string
+  brand: string
+}
+
+export const mockCards: CreditCard[] = [
+  {
+    id: 'CARD-0001',
+    holder: 'Carlos H Silva',
+    number: '**** **** **** 1234',
+    expiry: '12/29',
+    cvv: '123',
+    brand: 'Visa'
+  }
+]
 
 // Inline SVGs representation for mock images (automotive parts icons)
 // const partSvg = (color: string) => `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><rect width="100" height="100" fill="%23${color}" rx="12"/><circle cx="50" cy="50" r="30" fill="none" stroke="white" stroke-width="4"/><path d="M30 50h40M50 30v40" stroke="white" stroke-width="4"/></svg>`;
@@ -304,7 +346,7 @@ export const mockExchanges: Exchange[] = [
     product: 'Filtro de Ar do Motor de Alto Fluxo',
     requestDate: '2026-08-12',
     reason: 'Comprei a versão incorreta, incompatível com meu veículo.',
-    status: 'Pendente'
+    status: 'TROCA SOLICITADA'
   },
   {
     id: 'TRO-5002',
@@ -313,7 +355,7 @@ export const mockExchanges: Exchange[] = [
     product: 'Pastilha de Freio Cerâmica Traseira',
     requestDate: '2026-08-16',
     reason: 'Produto veio com avaria na embalagem e quebra no material cerâmico.',
-    status: 'Aprovado'
+    status: 'TROCA ACEITA'
   }
 ]
 
