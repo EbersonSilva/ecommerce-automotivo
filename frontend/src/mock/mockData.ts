@@ -88,7 +88,7 @@ export const mockProducts: Product[] = [
     minStock: 10,
     status: 'Ativo',
     description: 'Filtro de óleo de alta eficiência projetado para reter até 99% das impurezas do motor, prolongando a vida útil do lubrificante sintético.',
-    image: partSvg('f59e0b'), // Amber
+    image: '/products/filtro-oleo.webp', 
     compatibility: ['Gol G5/G6/G7', 'Uno 2010-2020', 'Onix 2013-2021', 'HB20 2012-2022']
   },
   {
@@ -103,7 +103,7 @@ export const mockProducts: Product[] = [
     minStock: 8,
     status: 'Ativo',
     description: 'Filtro de ar do motor com papel plissado de alta densidade para máxima retenção de poeira e fluxo de ar ideal para o motor.',
-    image: partSvg('10b981'), // Green
+    image: '/products/filtro-ar.webp',
     compatibility: ['Onix 2013-2019', 'Prisma 2013-2019', 'Spin 2013-2022']
   },
   {
@@ -118,7 +118,7 @@ export const mockProducts: Product[] = [
     minStock: 3,
     status: 'Ativo',
     description: 'Velas de ignição com ponta de irídio ultrafina para melhor inflamabilidade, partida rápida e economia de combustível a longo prazo.',
-    image: partSvg('8b5cf6'), // Purple
+    image: '/products/vela-ignicao.webp',
     compatibility: ['Civic 2012-2015', 'Fit 2015-2021', 'HR-V 2015-2021']
   },
   {
@@ -133,7 +133,7 @@ export const mockProducts: Product[] = [
     minStock: 5,
     status: 'Ativo',
     description: 'Correia dentada de perfil reforçado HNBR com alta resistência térmica e mecânica para sincronismo perfeito das válvulas.',
-    image: partSvg('ef4444'), // Red
+    image: '/products/correia-dentada.webp', // Red
     compatibility: ['Palio 1.0/1.4', 'Uno 1.0/1.4', 'Siena 1.4', 'Punto 1.4']
   },
   {
@@ -148,7 +148,7 @@ export const mockProducts: Product[] = [
     minStock: 4,
     status: 'Ativo',
     description: 'Amortecedor pressurizado a gás com tecnologia de ponta para maior estabilidade, segurança e conforto em qualquer terreno.',
-    image: partSvg('ec4899'), // Pink
+    image: '/products/amortecedor-dianteiro.webp', // Pink
     compatibility: ['Gol G5/G6/G7/G8', 'Voyage 2009-2022', 'Saveiro 2010-2022']
   },
   {
@@ -163,7 +163,7 @@ export const mockProducts: Product[] = [
     minStock: 10,
     status: 'Ativo',
     description: 'Par de lâmpadas H4 com efeito Xenon super branco de 5000K, oferecendo maior visibilidade noturna sem ofuscar a visão oposta.',
-    image: partSvg('06b6d4'), // Cyan
+    image: '/products/lampada-h4.webp', // Cyan
     compatibility: ['Compatibilidade Universal para encaixe H4 (12V)']
   },
   {
@@ -178,11 +178,12 @@ export const mockProducts: Product[] = [
     minStock: 3,
     status: 'Inativo', // Inactive product
     description: 'Discos de freio dianteiros ventilados fabricados em liga de alto carbono para melhor dissipação térmica e resistência à fadiga.',
-    image: partSvg('64748b'), // Slate
+    image: '/products/disco-freio.webp', // Slate
     compatibility: ['Ford Ka 2015-2021', 'Fiesta 2014-2019']
   }
 ]
 
+//dados de clientes, pedidos e trocas para simulação de relatórios e dashboards
 export const mockCustomers: Customer[] = [
   {
     id: '1',

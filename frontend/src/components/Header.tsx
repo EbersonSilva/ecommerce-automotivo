@@ -46,11 +46,11 @@ export const Header: React.FC = () => {
         <div className="flex items-center space-x-3 w-full md:w-auto justify-between md:justify-start">
           <Link to="/" className="flex items-center gap-2.5">
             <span className="text-2xl font-black bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent tracking-tight">
-              AutoPeças.net
+              AutoPeças
             </span>
-            <span className="bg-indigo-500/10 text-indigo-400 text-[10px] font-semibold px-2.5 py-0.5 rounded-full border border-indigo-500/20">
+            {/* <span className="bg-indigo-500/10 text-indigo-400 text-[10px] font-semibold px-2.5 py-0.5 rounded-full border border-indigo-500/20">
               PROTÓTIPO
-            </span>
+            </span> */}
           </Link>
           <Link 
             to="/admin" 
