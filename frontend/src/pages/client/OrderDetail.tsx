@@ -8,7 +8,7 @@ import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import { Select } from '../../components/ui/Select'
 import { Input } from '../../components/ui/Input'
-import { ArrowLeft, MapPin, CreditCard, RefreshCcw, Calendar, Receipt } from 'lucide-react'
+import { ArrowLeft, MapPin, CreditCard, RefreshCcw, Calendar, Receipt, XCircle, CheckCircle2 } from 'lucide-react'
 
 export const OrderDetail = () => {
   const { id } = useParams<{ id: string }>()
@@ -31,6 +31,45 @@ export const OrderDetail = () => {
       setOrder(found || null)
     }
   }, [id])
+
+  const updateOrderStatus = (nextStatus: Order['status']) => {
+    if (!order) return
+    try {
+      const savedCustom = localStorage.getItem('custom-orders')
+      const customList: Order[] = savedCustom ? JSON.parse(savedCustom) : []
+      
+      const foundInCustomIndex = customList.findIndex((o) => o.id === order.id)
+      let updatedList: Order[]
+      
+      if (foundInCustomIndex > -1) {
+        customList[foundInCustomIndex].status = nextStatus
+        updatedList = [...customList]
+      } else {
+        const updatedOrder = { ...order, status: nextStatus }
+        updatedList = [updatedOrder, ...customList]
+      }
+      
+      localStorage.setItem('custom-orders', JSON.stringify(updatedList))
+      setOrder({ ...order, status: nextStatus })
+    } catch (err) {
+      console.error(err)
+      alert('Falha ao atualizar o status do pedido.')
+    }
+  }
+
+  const handleCancelOrder = () => {
+    if (confirm('Tem certeza de que deseja cancelar este pedido?')) {
+      updateOrderStatus('CANCELADO')
+      alert('Pedido cancelado com sucesso!')
+    }
+  }
+
+  const handleConfirmReceipt = () => {
+    if (confirm('Deseja confirmar o recebimento deste pedido?')) {
+      updateOrderStatus('ENTREGUE')
+      alert('Recebimento confirmado! O status do pedido foi atualizado para ENTREGUE.')
+    }
+  }
 
   const productOptions = useMemo(() => {
     if (!order) return []
@@ -120,16 +159,39 @@ export const OrderDetail = () => {
           <h1 className="text-3xl font-black text-white tracking-tight mt-3">Detalhes da Compra</h1>
         </div>
 
-        {order.status === 'Entregue' && (
-          <Button 
-            onClick={() => setIsExchangeModalOpen(true)}
-            variant="outline" 
-            className="gap-2 text-xs font-bold border-indigo-500/30 text-indigo-400 bg-indigo-500/5 hover:bg-indigo-500/10"
-          >
-            <RefreshCcw className="w-3.5 h-3.5" />
-            Solicitar Devolução / Troca
-          </Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {(order.status === 'EM ABERTO' || order.status === 'EM PROCESSAMENTO') && (
+            <Button 
+              onClick={handleCancelOrder}
+              variant="danger" 
+              className="gap-2 text-xs font-bold"
+            >
+              <XCircle className="w-3.5 h-3.5" />
+              Cancelar Pedido
+            </Button>
+          )}
+
+          {order.status === 'EM TRÂNSITO' && (
+            <Button 
+              onClick={handleConfirmReceipt}
+              className="gap-2 text-xs font-bold bg-emerald-605 border-emerald-700 hover:bg-emerald-600 hover:border-emerald-700 text-white"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Confirmar Recebimento
+            </Button>
+          )}
+
+          {order.status === 'ENTREGUE' && (
+            <Button 
+              onClick={() => setIsExchangeModalOpen(true)}
+              variant="outline" 
+              className="gap-2 text-xs font-bold border-indigo-500/30 text-indigo-400 bg-indigo-500/5 hover:bg-indigo-500/10"
+            >
+              <RefreshCcw className="w-3.5 h-3.5" />
+              Solicitar Devolução / Troca
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-4 items-start">

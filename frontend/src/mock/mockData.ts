@@ -41,7 +41,7 @@ export interface Order {
   customerName: string
   date: string
   total: number
-  status: 'Pendente' | 'Pago' | 'Enviado' | 'Entregue' | 'Cancelado'
+  status: 'EM ABERTO' | 'EM PROCESSAMENTO' | 'PAGAMENTO REALIZADO' | 'EM TRÂNSITO' | 'ENTREGUE' | 'CANCELADO'
   items: OrderItem[]
   paymentMethod: string
   shippingAddress: string
@@ -58,7 +58,7 @@ export interface Exchange {
 }
 
 // Inline SVGs representation for mock images (automotive parts icons)
-const partSvg = (color: string) => `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><rect width="100" height="100" fill="%23${color}" rx="12"/><circle cx="50" cy="50" r="30" fill="none" stroke="white" stroke-width="4"/><path d="M30 50h40M50 30v40" stroke="white" stroke-width="4"/></svg>`;
+// const partSvg = (color: string) => `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><rect width="100" height="100" fill="%23${color}" rx="12"/><circle cx="50" cy="50" r="30" fill="none" stroke="white" stroke-width="4"/><path d="M30 50h40M50 30v40" stroke="white" stroke-width="4"/></svg>`;
 
 export const mockProducts: Product[] = [
   {
@@ -246,7 +246,7 @@ export const mockOrders: Order[] = [
     customerName: 'Carlos Henrique Silva',
     date: '2026-08-15',
     total: 539.80,
-    status: 'Pago',
+    status: 'PAGAMENTO REALIZADO',
     items: [
       { productId: '1', name: 'Pastilha de Freio Cerâmica Traseira', quantity: 1, price: 189.90 },
       { productId: '4', name: 'Jogo de Vela de Ignição Iridium (4 un)', quantity: 1, price: 349.90 }
@@ -260,7 +260,7 @@ export const mockOrders: Order[] = [
     customerName: 'Mariana Costa Oliveira',
     date: '2026-08-17',
     total: 91.00,
-    status: 'Pendente',
+    status: 'EM ABERTO',
     items: [
       { productId: '2', name: 'Filtro de Óleo Sintético Multiviscoso', quantity: 2, price: 45.50 }
     ],
@@ -273,7 +273,7 @@ export const mockOrders: Order[] = [
     customerName: 'Fernanda Lima Rocha',
     date: '2026-08-18',
     total: 598.90,
-    status: 'Enviado',
+    status: 'EM TRÂNSITO',
     items: [
       { productId: '6', name: 'Amortecedor Pressurizado Turbogás Dianteiro', quantity: 1, price: 459.00 },
       { productId: '7', name: 'Lâmpada Super Branca H4 55W (Par)', quantity: 1, price: 139.90 }
@@ -287,7 +287,7 @@ export const mockOrders: Order[] = [
     customerName: 'Carlos Henrique Silva',
     date: '2026-08-10',
     total: 62.00,
-    status: 'Entregue',
+    status: 'ENTREGUE',
     items: [
       { productId: '3', name: 'Filtro de Ar do Motor de Alto Fluxo', quantity: 1, price: 62.00 }
     ],

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { mockProducts, mockCustomers, mockOrders } from '../../mock/mockData'
 import type { Order } from '../../mock/mockData'
-import { Badge } from '../../components/ui/Badge'
+import { Badge, getStatusVariant } from '../../components/ui/Badge'
 import { 
   Users, 
   ShoppingBag, 
@@ -33,7 +33,7 @@ export const Dashboard = () => {
   const lowStockItems = mockProducts.filter((p) => p.stock <= p.minStock).length
   
   const totalRevenue = totalOrders.reduce((acc, o) => {
-    if (o.status !== 'Cancelado') return acc + o.total
+    if (o.status !== 'CANCELADO') return acc + o.total
     return acc
   }, 0)
 
@@ -95,7 +95,7 @@ export const Dashboard = () => {
                   <span className="font-mono text-slate-350 font-semibold">
                     R$ {order.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
-                  <Badge variant={order.status === 'Pago' || order.status === 'Entregue' ? 'success' : order.status === 'Pendente' ? 'warning' : 'info'}>
+                  <Badge variant={getStatusVariant(order.status)}>
                     {order.status}
                   </Badge>
                 </div>

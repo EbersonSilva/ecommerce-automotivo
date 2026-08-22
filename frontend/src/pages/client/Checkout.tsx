@@ -71,7 +71,7 @@ export const Checkout = () => {
         customerName: 'Cliente Acadêmico (Você)',
         date: new Date().toISOString().split('T')[0],
         total: total,
-        status: 'Pago', // Approved instantly for simulation
+        status: 'EM ABERTO', // Inicia em Aberto conforme máquina de estados
         items: cartItems.map((item) => ({
           productId: item.productId,
           name: item.name,

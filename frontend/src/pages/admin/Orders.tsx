@@ -85,16 +85,17 @@ export const Orders = () => {
                   {o.status}
                 </Badge>
               </td>
-              <td className="px-6 py-4 max-w-[160px]">
+              <td className="px-6 py-4 max-w-[170px]">
                 <Select
                   value={o.status}
                   onChange={(e) => handleStatusChange(o.id, e.target.value)}
                   options={[
-                    { value: 'Pendente', label: 'Pendente' },
-                    { value: 'Pago', label: 'Pago' },
-                    { value: 'Enviado', label: 'Enviado' },
-                    { value: 'Entregue', label: 'Entregue' },
-                    { value: 'Cancelado', label: 'Cancelado' }
+                    { value: 'EM ABERTO', label: 'EM ABERTO' },
+                    { value: 'EM PROCESSAMENTO', label: 'EM PROCESSAMENTO' },
+                    { value: 'PAGAMENTO REALIZADO', label: 'PAGAMENTO REALIZADO' },
+                    { value: 'EM TRÂNSITO', label: 'EM TRÂNSITO' },
+                    { value: 'ENTREGUE', label: 'ENTREGUE' },
+                    { value: 'CANCELADO', label: 'CANCELADO' }
                   ]}
                   className="py-1 px-2.5 text-xs rounded-lg"
                 />
