@@ -30,7 +30,11 @@ export const Account = () => {
       setCoupons([...customCoupons, ...mockCoupons])
 
       const savedExchanges = localStorage.getItem('custom-exchanges')
-      const customExchanges = savedExchanges ? JSON.parse(savedExchanges) : []
+      let customExchanges = savedExchanges ? JSON.parse(savedExchanges) : []
+      customExchanges = customExchanges.map((ex: any) => ({
+        ...ex,
+        status: ex.status === 'Pendente' ? 'TROCA SOLICITADA' : ex.status
+      }))
       
       // Filter custom exchanges so they don't duplicate mock exchanges if they override them
       const customExchangeIds = customExchanges.map((ex: Exchange) => ex.id)

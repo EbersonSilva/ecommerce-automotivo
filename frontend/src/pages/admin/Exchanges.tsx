@@ -12,7 +12,11 @@ export const Exchanges = () => {
   const loadExchanges = () => {
     try {
       const savedCustom = localStorage.getItem('custom-exchanges')
-      const customList = savedCustom ? JSON.parse(savedCustom) : []
+      let customList = savedCustom ? JSON.parse(savedCustom) : []
+      customList = customList.map((ex: any) => ({
+        ...ex,
+        status: ex.status === 'Pendente' ? 'TROCA SOLICITADA' : ex.status
+      }))
       setExchanges([...customList, ...mockExchanges])
     } catch {
       setExchanges(mockExchanges)

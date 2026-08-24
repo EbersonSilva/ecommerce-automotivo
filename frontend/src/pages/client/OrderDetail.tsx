@@ -118,7 +118,7 @@ export const OrderDetail = () => {
         product: selectedProduct,
         requestDate: new Date().toISOString().split('T')[0],
         reason: exchangeReason,
-        status: 'Pendente'
+        status: 'TROCA SOLICITADA'
       }
 
       exchangeList.unshift(newExchange)

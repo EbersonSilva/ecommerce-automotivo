@@ -47,8 +47,8 @@ export const Chatbot: React.FC = () => {
     // Bot Response Logic
     setTimeout(() => {
       const query = textToSend.toLowerCase().trim()
-      
-      // Search active products matching compatibility or name/category
+
+      // Busca produtos ativos que correspondam à compatibilidade ou nome/categoria
       const matched = mockProducts.filter((product) => {
         const matchesCompatibility = product.compatibility.some(c => c.toLowerCase().includes(query))
         const matchesName = product.name.toLowerCase().includes(query)
@@ -80,7 +80,7 @@ export const Chatbot: React.FC = () => {
     try {
       const savedCart = localStorage.getItem('cart')
       const cartItems = savedCart ? JSON.parse(savedCart) : []
-      
+
       const existing = cartItems.find((item: any) => item.productId === product.id)
       if (existing) {
         existing.quantity += 1
@@ -97,7 +97,7 @@ export const Chatbot: React.FC = () => {
       localStorage.setItem('cart', JSON.stringify(cartItems))
       window.dispatchEvent(new Event('cart-updated'))
 
-      // Send confirmation message
+      // Envia mensagem de confirmação
       const confirmMessage: Message = {
         id: `bot-cart-${Date.now()}`,
         sender: 'bot',
@@ -112,7 +112,7 @@ export const Chatbot: React.FC = () => {
 
   return (
     <div className="fixed bottom-6 right-6 z-[999] font-sans text-left">
-      {/* Floating Toggle Button */}
+      {/* Botão flutuante */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-14 h-14 rounded-full bg-gradient-to-tr from-indigo-650 via-indigo-500 to-purple-500 text-white flex items-center justify-center shadow-xl hover:shadow-indigo-500/20 hover:scale-105 transition-all duration-300 cursor-pointer animate-pulse relative"
@@ -121,11 +121,11 @@ export const Chatbot: React.FC = () => {
         {isOpen ? <X className="w-6 h-6" /> : <MessageCircle className="w-6 h-6" />}
       </button>
 
-      {/* Chat Window Frame */}
+      {/* Janela do Chat */}
       {isOpen && (
         <div className="absolute bottom-16 right-0 w-85 sm:w-96 h-[480px] bg-slate-900/90 border border-slate-800 rounded-3xl shadow-2xl backdrop-blur-md flex flex-col overflow-hidden animate-fadeIn">
-          
-          {/* Chat Header */}
+
+          {/* Cabeçalho do Chat */}
           <div className="bg-gradient-to-r from-indigo-950 to-slate-900 border-b border-slate-800 p-4.5 flex justify-between items-center">
             <div className="flex items-center gap-2.5">
               <div className="p-2 bg-indigo-500/10 rounded-xl border border-indigo-500/20 text-indigo-400">
@@ -134,9 +134,9 @@ export const Chatbot: React.FC = () => {
               <div>
                 <h4 className="text-xs font-bold text-slate-100 flex items-center gap-1">
                   AutoBot Assistente
-                  <Sparkles className="w-3 h-3 text-indigo-400" />
+                  {/* <Sparkles className="w-3 h-3 text-indigo-400" /> */}
                 </h4>
-                <span className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider">Homologação Técnica</span>
+                {/* <span className="text-[9px] text-slate-500 font-semibold uppercase tracking-wider">Homologação Técnica</span> */}
               </div>
             </div>
             <button
@@ -147,7 +147,7 @@ export const Chatbot: React.FC = () => {
             </button>
           </div>
 
-          {/* Messages Body container */}
+          {/* Container do corpo de mensagens */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3.5 custom-scrollbar">
             {messages.map((m) => (
               <div
@@ -155,19 +155,18 @@ export const Chatbot: React.FC = () => {
                 className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'} w-full animate-fadeIn`}
               >
                 <div
-                  className={`max-w-[85%] rounded-2xl p-3 text-xs leading-relaxed ${
-                    m.sender === 'user'
-                      ? 'bg-indigo-500 text-white rounded-tr-none'
-                      : 'bg-slate-950/65 border border-slate-850 text-slate-200 rounded-tl-none'
-                  }`}
+                  className={`max-w-[85%] rounded-2xl p-3 text-xs leading-relaxed ${m.sender === 'user'
+                    ? 'bg-indigo-500 text-white rounded-tr-none'
+                    : 'bg-slate-950/65 border border-slate-850 text-slate-200 rounded-tl-none'
+                    }`}
                 >
                   <p>{m.text}</p>
 
-                  {/* Render products cards if any */}
+                  {/* Renderiza cards de produtos se houver */}
                   {m.products && m.products.length > 0 && (
                     <div className="mt-3 space-y-2">
                       {m.products.map((p) => (
-                        <div 
+                        <div
                           key={p.id}
                           className="bg-slate-900 border border-slate-800 p-2 rounded-xl flex items-center justify-between gap-3"
                         >
@@ -192,17 +191,17 @@ export const Chatbot: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Predefined links inside bot responses */}
+                  {/* Links pré-definidos dentro das respostas do bot */}
                   {m.text.includes('adicionado ao seu carrinho!') && (
                     <div className="flex gap-2.5 mt-2.5">
-                      <Link 
+                      <Link
                         to="/carrinho"
                         onClick={() => setIsOpen(false)}
                         className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 underline"
                       >
                         Ir para o Carrinho
                       </Link>
-                      <Link 
+                      <Link
                         to="/checkout"
                         onClick={() => setIsOpen(false)}
                         className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 underline"
@@ -218,7 +217,7 @@ export const Chatbot: React.FC = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Quick Replies Shortcut Pills */}
+          {/* Botões de Resposta Rápida */}
           <div className="px-4 py-2 flex gap-1.5 overflow-x-auto whitespace-nowrap bg-slate-950/20 border-t border-slate-850/50 custom-scrollbar">
             {['Civic', 'Onix', 'Gol', 'Corolla', 'Filtros', 'Freios'].map((pill) => (
               <button
@@ -231,8 +230,8 @@ export const Chatbot: React.FC = () => {
             ))}
           </div>
 
-          {/* Input Chat Send Footer */}
-          <form 
+          {/* Input de Envio de Chat Footer */}
+          <form
             onSubmit={(e) => {
               e.preventDefault()
               handleSend(inputValue)
