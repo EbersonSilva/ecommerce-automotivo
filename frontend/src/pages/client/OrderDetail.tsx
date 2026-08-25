@@ -21,16 +21,25 @@ export const OrderDetail = () => {
 
   useEffect(() => {
     try {
+      const loggedCustomerStr = localStorage.getItem('logged-customer')
+      const currentCust = loggedCustomerStr ? JSON.parse(loggedCustomerStr) : null
+
       const savedCustom = localStorage.getItem('custom-orders')
       const customList = savedCustom ? JSON.parse(savedCustom) : []
       const combined = [...customList, ...mockOrders]
       const found = combined.find((o) => o.id === id)
-      setOrder(found || null)
+      
+      if (found && currentCust && found.customerId !== currentCust.id) {
+        setOrder(null)
+      } else {
+        setOrder(found || null)
+      }
     } catch {
       const found = mockOrders.find((o) => o.id === id)
       setOrder(found || null)
     }
   }, [id])
+
 
   const updateOrderStatus = (nextStatus: Order['status']) => {
     if (!order) return
@@ -114,6 +123,7 @@ export const OrderDetail = () => {
       const newExchange = {
         id: `TRO-${Math.floor(5000 + Math.random() * 9000)}`,
         orderId: order.id,
+        customerId: order.customerId,
         customerName: order.customerName || 'Cliente Logado',
         product: selectedProduct,
         requestDate: new Date().toISOString().split('T')[0],

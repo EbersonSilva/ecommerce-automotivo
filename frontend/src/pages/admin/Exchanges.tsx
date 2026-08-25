@@ -65,6 +65,7 @@ export const Exchanges = () => {
         if (currentExchange) {
           // Find order to calculate value (or generate R$ 150.00 mock value if not found)
           let couponValue = 150.00
+          let targetCustomerId = '1'
           try {
             const savedOrders = localStorage.getItem('custom-orders')
             const ordersList = savedOrders ? JSON.parse(savedOrders) : []
@@ -74,6 +75,7 @@ export const Exchanges = () => {
               if (item) {
                 couponValue = item.price * item.quantity
               }
+              targetCustomerId = order.customerId || '1'
             }
           } catch (e) {
             console.error(e)
@@ -87,7 +89,7 @@ export const Exchanges = () => {
             value: couponValue,
             status: 'Ativo' as const,
             description: `Cupom de troca gerado a partir da troca ${exchangeId} (Pedido ${currentExchange.orderId})`,
-            customerId: '1' // Carlos Henrique Silva
+            customerId: targetCustomerId
           }
 
           const savedCoupons = localStorage.getItem('custom-coupons')

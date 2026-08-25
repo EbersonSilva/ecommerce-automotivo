@@ -8,7 +8,7 @@ export const Footer: React.FC = () => {
         {/* About Section */}
         <div className="flex flex-col gap-3 text-left">
           <span className="text-lg font-black bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            AutoPeças.net
+            AutoPeças
           </span>
           <p className="leading-relaxed text-slate-500">
             Protótipo de e-commerce de peças automotivas desenvolvido para a disciplina de Laboratório de Engenharia de Software.

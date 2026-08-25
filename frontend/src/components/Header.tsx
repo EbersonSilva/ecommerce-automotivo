@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ShoppingCart, User, Search, Shield, Package } from 'lucide-react'
+import { ShoppingCart, User, Search, Shield, Package, LogOut } from 'lucide-react'
 
 export const Header: React.FC = () => {
   const [cartCount, setCartCount] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
+  const [activeCustomer, setActiveCustomer] = useState<any>(null)
   const navigate = useNavigate()
 
   // Function to load cart count from localStorage
@@ -23,12 +24,25 @@ export const Header: React.FC = () => {
     }
   }
 
+  const loadActiveCustomer = () => {
+    try {
+      const saved = localStorage.getItem('logged-customer')
+      setActiveCustomer(saved ? JSON.parse(saved) : null)
+    } catch {
+      setActiveCustomer(null)
+    }
+  }
+
   useEffect(() => {
     updateCartCount()
+    loadActiveCustomer()
     // Listen for custom event 'cart-updated' to keep count in sync
     window.addEventListener('cart-updated', updateCartCount)
+    // Listen for custom event 'auth-change' to keep user details in sync
+    window.addEventListener('auth-change', loadActiveCustomer)
     return () => {
       window.removeEventListener('cart-updated', updateCartCount)
+      window.removeEventListener('auth-change', loadActiveCustomer)
     }
   }, [])
 
@@ -85,9 +99,32 @@ export const Header: React.FC = () => {
             <Package className="w-5 h-5" />
           </Link>
 
-          <Link to="/minha-conta" className="text-slate-400 hover:text-slate-200 transition-colors relative p-1.5" title="Minha Conta">
-            <User className="w-5 h-5" />
-          </Link>
+          {activeCustomer ? (
+            <div className="flex items-center gap-1.5">
+              <Link to="/minha-conta" className="text-slate-300 hover:text-white transition-colors flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl" title="Minha Conta">
+                <User className="w-4 h-4 text-indigo-400" />
+                <span className="text-xs font-bold max-w-[100px] truncate">{activeCustomer.name.split(' ')[0]}</span>
+              </Link>
+              <button 
+                onClick={() => {
+                  if (confirm('Deseja realmente sair da sua conta?')) {
+                    localStorage.removeItem('logged-customer')
+                    window.dispatchEvent(new Event('auth-change'))
+                    navigate('/')
+                  }
+                }}
+                className="text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-all p-2 rounded-xl border border-rose-500/20 cursor-pointer"
+                title="Sair"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <Link to="/cadastro" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500/15 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/25 transition-all text-xs font-bold rounded-xl" title="Acessar / Cadastrar">
+              <User className="w-4 h-4" />
+              <span>Entrar</span>
+            </Link>
+          )}
 
           <Link to="/carrinho" className="text-slate-400 hover:text-slate-200 transition-colors relative p-1.5" title="Carrinho">
             <ShoppingCart className="w-5 h-5" />

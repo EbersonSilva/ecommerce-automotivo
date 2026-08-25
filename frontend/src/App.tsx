@@ -13,6 +13,7 @@ import Checkout from './pages/client/Checkout'
 import ClientOrders from './pages/client/Orders'
 import ClientOrderDetail from './pages/client/OrderDetail'
 import Account from './pages/client/Account'
+import Register from './pages/client/Register'
 
 // Admin Pages
 import Dashboard from './pages/admin/Dashboard'
@@ -40,6 +41,7 @@ function App() {
           <Route path="pedidos" element={<ClientOrders />} />
           <Route path="pedidos/:id" element={<ClientOrderDetail />} />
           <Route path="minha-conta" element={<Account />} />
+          <Route path="cadastro" element={<Register />} />
         </Route>
 
         {/* Administrative Backend Routes */}

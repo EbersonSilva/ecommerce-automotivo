@@ -1,33 +1,39 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { Breadcrumb } from '../../components/ui/Breadcrumb'
 import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { User, MapPin, Save, Ticket, RefreshCcw, Truck } from 'lucide-react'
-import { mockCoupons, mockExchanges, type Coupon, type Exchange } from '../../mock/mockData'
+import { mockCoupons, mockExchanges, type Coupon, type Exchange, type Customer } from '../../mock/mockData'
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
 import { Table } from '../../components/ui/Table'
 
 export const Account = () => {
+  const [loggedCustomer, setLoggedCustomer] = useState<Customer | null>(null)
   const [activeTab, setActiveTab] = useState<'profile' | 'coupons' | 'exchanges'>('profile')
 
-  const [name, setName] = useState('Carlos Henrique Silva')
-  const [email, setEmail] = useState('carlos.henrique@gmail.com')
-  const [phone, setPhone] = useState('(11) 98765-4321')
-  const [cpf, setCpf] = useState('123.456.789-00')
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [cpf, setCpf] = useState('')
 
-  const [address, setAddress] = useState('Av. Paulista, 1000 - Ap 42')
-  const [city, setCity] = useState('São Paulo')
-  const [state, setState] = useState('SP')
-  const [zipCode, setZipCode] = useState('01310-100')
+  const [address, setAddress] = useState('')
+  const [city, setCity] = useState('')
+  const [state, setState] = useState('')
+  const [zipCode, setZipCode] = useState('')
 
   const [coupons, setCoupons] = useState<Coupon[]>([])
   const [exchanges, setExchanges] = useState<Exchange[]>([])
 
-  const loadData = () => {
+  const loadData = (currentCust: Customer | null) => {
     try {
       const savedCoupons = localStorage.getItem('custom-coupons')
       const customCoupons = savedCoupons ? JSON.parse(savedCoupons) : []
-      setCoupons([...customCoupons, ...mockCoupons])
+      const allCoupons = [...customCoupons, ...mockCoupons]
+      const filteredCoupons = currentCust 
+        ? allCoupons.filter((c: Coupon) => c.customerId === currentCust.id)
+        : allCoupons
+      setCoupons(filteredCoupons)
 
       const savedExchanges = localStorage.getItem('custom-exchanges')
       let customExchanges = savedExchanges ? JSON.parse(savedExchanges) : []
@@ -36,10 +42,13 @@ export const Account = () => {
         status: ex.status === 'Pendente' ? 'TROCA SOLICITADA' : ex.status
       }))
       
-      // Filter custom exchanges so they don't duplicate mock exchanges if they override them
       const customExchangeIds = customExchanges.map((ex: Exchange) => ex.id)
       const filteredMocks = mockExchanges.filter((ex) => !customExchangeIds.includes(ex.id))
-      setExchanges([...customExchanges, ...filteredMocks])
+      const allExchanges = [...customExchanges, ...filteredMocks]
+      const filteredExchanges = currentCust
+        ? allExchanges.filter((ex: any) => ex.customerId === currentCust.id || ex.customerName === currentCust.name)
+        : allExchanges
+      setExchanges(filteredExchanges)
     } catch {
       setCoupons(mockCoupons)
       setExchanges(mockExchanges)
@@ -47,17 +56,98 @@ export const Account = () => {
   }
 
   useEffect(() => {
-    loadData()
+    const saved = localStorage.getItem('logged-customer')
+    let parsed: Customer | null = null
+    if (saved) {
+      parsed = JSON.parse(saved)
+      setLoggedCustomer(parsed)
+      setName(parsed?.name || '')
+      setEmail(parsed?.email || '')
+      setPhone(parsed?.phone || '')
+      setCpf(parsed?.cpf || '')
+      setAddress(parsed?.address || '')
+      setCity(parsed?.city || '')
+      setState(parsed?.state || '')
+      setZipCode(parsed?.zipCode || '')
+    }
+    loadData(parsed)
   }, [])
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault()
-    alert('Perfil atualizado com sucesso (Simulado)!')
+    if (!name || !email || !phone) {
+      alert('Favor preencher todos os campos obrigatórios.')
+      return
+    }
+
+    try {
+      const savedLogged = localStorage.getItem('logged-customer')
+      if (!savedLogged) return
+
+      const current = JSON.parse(savedLogged)
+      const updatedCustomer: Customer = {
+        ...current,
+        name,
+        email,
+        phone
+      }
+
+      localStorage.setItem('logged-customer', JSON.stringify(updatedCustomer))
+
+      // Update global customers database
+      const saved = localStorage.getItem('custom-customers')
+      const customersList: Customer[] = saved ? JSON.parse(saved) : [...mockCustomers]
+      const index = customersList.findIndex((c) => c.id === current.id)
+      if (index !== -1) {
+        customersList[index] = updatedCustomer
+      } else {
+        customersList.push(updatedCustomer)
+      }
+      localStorage.setItem('custom-customers', JSON.stringify(customersList))
+
+      // Dispatch auth change event
+      window.dispatchEvent(new Event('auth-change'))
+      
+      alert('Perfil atualizado com sucesso!')
+    } catch (err) {
+      console.error(err)
+      alert('Erro ao atualizar perfil.')
+    }
   }
 
   const handleSaveAddress = (e: React.FormEvent) => {
     e.preventDefault()
-    alert('Endereço de entrega atualizado com sucesso (Simulado)!')
+    try {
+      const savedLogged = localStorage.getItem('logged-customer')
+      if (!savedLogged) return
+
+      const current = JSON.parse(savedLogged)
+      const updatedCustomer: Customer = {
+        ...current,
+        address,
+        city,
+        state,
+        zipCode
+      }
+
+      localStorage.setItem('logged-customer', JSON.stringify(updatedCustomer))
+
+      // Update global customers database
+      const saved = localStorage.getItem('custom-customers')
+      const customersList: Customer[] = saved ? JSON.parse(saved) : [...mockCustomers]
+      const index = customersList.findIndex((c) => c.id === current.id)
+      if (index !== -1) {
+        customersList[index] = updatedCustomer
+      } else {
+        customersList.push(updatedCustomer)
+      }
+      localStorage.setItem('custom-customers', JSON.stringify(customersList))
+
+      alert('Endereço de entrega atualizado com sucesso!')
+    } catch (err) {
+      console.error(err)
+      alert('Erro ao atualizar endereço.')
+    }
   }
 
   const handleDispatchItem = (exchangeId: string) => {
@@ -106,6 +196,35 @@ export const Account = () => {
       alert('Falha ao despachar o item.')
     }
   }
+
+  if (!loggedCustomer) {
+    return (
+      <div className="flex flex-col gap-6 text-left max-w-xl mx-auto w-full py-12">
+        <div className="bg-slate-900/40 border border-slate-900 p-8 rounded-3xl backdrop-blur-sm shadow-2xl text-center flex flex-col gap-6">
+          <div className="w-16 h-16 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center text-2xl mx-auto">
+            👤
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-white tracking-tight mb-2">Identifique-se para acessar sua conta</h2>
+            <p className="text-xs text-slate-500 leading-relaxed max-w-sm mx-auto">
+              Para consultar seus cupons de troca, pedidos e atualizar seus dados de entrega, realize o cadastro ou identifique-se por CPF.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 mt-2">
+            <Link to="/cadastro" className="w-full">
+              <Button className="w-full justify-center py-2.5">
+                Identificar ou Cadastrar-se
+              </Button>
+            </Link>
+            <Link to="/" className="text-xs text-slate-500 hover:text-slate-350 transition-colors">
+              Voltar para a Home
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
 
   return (
     <div className="flex flex-col gap-6 text-left max-w-4xl mx-auto w-full">

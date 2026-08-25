@@ -21,10 +21,10 @@ export const Checkout = () => {
 
   // Step 1: Address Selection
   const [addressOption, setAddressOption] = useState<'saved' | 'new'>('saved')
-  const [address, setAddress] = useState('Av. Paulista, 1000 - Ap 42')
-  const [city, setCity] = useState('São Paulo')
-  const [state, setState] = useState('SP')
-  const [zipCode, setZipCode] = useState('01310-100')
+  const [address, setAddress] = useState('')
+  const [city, setCity] = useState('')
+  const [state, setState] = useState('')
+  const [zipCode, setZipCode] = useState('')
 
   // Step 2: Coupons State
   const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([])
@@ -65,12 +65,29 @@ export const Checkout = () => {
         setCartItems(JSON.parse(savedCart))
       }
 
+      // Logged user address
+      const savedCustomer = localStorage.getItem('logged-customer')
+      let customer: any = null
+      if (savedCustomer) {
+        customer = JSON.parse(savedCustomer)
+        setAddress(customer.address || '')
+        setCity(customer.city || '')
+        setState(customer.state || '')
+        setZipCode(customer.zipCode || '')
+        setAddressOption('saved')
+      } else {
+        setAddressOption('new')
+      }
+
       // Coupons
       const savedCoupons = localStorage.getItem('custom-coupons')
       const customCoupons = savedCoupons ? JSON.parse(savedCoupons) : []
       const allCoupons = [...customCoupons, ...mockCoupons]
-      // Only display active coupons
-      setAvailableCoupons(allCoupons.filter((c: Coupon) => c.status === 'Ativo'))
+      // Only display active coupons for the logged-in customer
+      const filteredCoupons = customer 
+        ? allCoupons.filter((c: Coupon) => c.status === 'Ativo' && c.customerId === customer.id)
+        : allCoupons.filter((c: Coupon) => c.status === 'Ativo')
+      setAvailableCoupons(filteredCoupons)
 
       // Cards
       const savedCards = localStorage.getItem('custom-cards')
@@ -258,10 +275,13 @@ export const Checkout = () => {
         payMethodDescription += ` + ${selectedCouponIds.length} Cupom(ns) (Desconto: R$ ${couponsDiscount.toFixed(2)})`
       }
 
+      const loggedCustomerStr = localStorage.getItem('logged-customer')
+      const currentCust = loggedCustomerStr ? JSON.parse(loggedCustomerStr) : null
+
       const newOrder = {
         id: newOrderId,
-        customerId: 'custom-user',
-        customerName: 'Cliente Acadêmico (Você)',
+        customerId: currentCust ? currentCust.id : 'custom-user',
+        customerName: currentCust ? currentCust.name : 'Cliente Acadêmico (Você)',
         date: new Date().toISOString().split('T')[0],
         total: total,
         status: 'EM ABERTO' as const,
@@ -304,6 +324,34 @@ export const Checkout = () => {
         <p className="text-xs text-slate-500 mb-6 font-medium">Adicione itens no carrinho antes de finalizar a compra.</p>
         <Link to="/produtos">
           <Button variant="primary">Explorar Produtos</Button>
+        </Link>
+      </div>
+    )
+  }
+
+  // Guard for customer identification
+  const activeCustomerStr = localStorage.getItem('logged-customer')
+  const activeCustomer = activeCustomerStr ? JSON.parse(activeCustomerStr) : null
+
+  if (!activeCustomer && step < 4) {
+    return (
+      <div className="text-center py-20 bg-slate-900/40 border border-slate-900 rounded-3xl p-16 max-w-xl mx-auto backdrop-blur-sm flex flex-col items-center gap-6">
+        <div className="w-16 h-16 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center text-2xl animate-pulse">
+          👤
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-white mb-2">Identificação Necessária</h2>
+          <p className="text-xs text-slate-500 max-w-sm leading-relaxed">
+            Para finalizar sua compra, você precisa estar identificado ou cadastrado no sistema.
+          </p>
+        </div>
+        <Link to="/cadastro" state={{ from: '/checkout' }} className="w-full">
+          <Button variant="primary" className="w-full justify-center py-2.5">
+            Cadastrar-se ou Identificar por CPF
+          </Button>
+        </Link>
+        <Link to="/carrinho" className="text-xs text-slate-500 hover:text-slate-350 transition-colors">
+          Voltar para o Carrinho
         </Link>
       </div>
     )
@@ -366,10 +414,14 @@ export const Checkout = () => {
                   type="button"
                   onClick={() => {
                     setAddressOption('saved')
-                    setAddress('Av. Paulista, 1000 - Ap 42')
-                    setCity('São Paulo')
-                    setState('SP')
-                    setZipCode('01310-100')
+                    const savedCustomer = localStorage.getItem('logged-customer')
+                    if (savedCustomer) {
+                      const customer = JSON.parse(savedCustomer)
+                      setAddress(customer.address || '')
+                      setCity(customer.city || '')
+                      setState(customer.state || '')
+                      setZipCode(customer.zipCode || '')
+                    }
                   }}
                   className={`flex-1 p-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                     addressOption === 'saved'

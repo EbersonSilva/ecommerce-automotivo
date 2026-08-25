@@ -11,15 +11,55 @@ import { Eye, ClipboardList } from 'lucide-react'
 export const Orders = () => {
   const [orders, setOrders] = useState<Order[]>([])
 
+  const loggedCustomerStr = localStorage.getItem('logged-customer')
+  const currentCust = loggedCustomerStr ? JSON.parse(loggedCustomerStr) : null
+
   useEffect(() => {
     try {
+      if (!currentCust) {
+        setOrders([])
+        return
+      }
       const savedCustom = localStorage.getItem('custom-orders')
       const customList = savedCustom ? JSON.parse(savedCustom) : []
-      setOrders([...customList, ...mockOrders])
+      const allOrders = [...customList, ...mockOrders]
+
+      // Filter: only show orders for the logged-in customer
+      const filteredOrders = allOrders.filter((order: Order) => order.customerId === currentCust.id)
+      setOrders(filteredOrders)
     } catch {
-      setOrders(mockOrders)
+      setOrders([])
     }
   }, [])
+
+  if (!currentCust) {
+    return (
+      <div className="flex flex-col gap-6 text-left max-w-xl mx-auto w-full py-12">
+        <div className="bg-slate-900/40 border border-slate-900 p-8 rounded-3xl backdrop-blur-sm shadow-2xl text-center flex flex-col gap-6">
+          <div className="w-16 h-16 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center text-2xl mx-auto">
+            📦
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-white tracking-tight mb-2">Acesse seus pedidos</h2>
+            <p className="text-xs text-slate-500 leading-relaxed max-w-sm mx-auto">
+              Para consultar o histórico de suas compras e acompanhar as entregas, identifique-se com o seu CPF.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 mt-2">
+            <Link to="/cadastro" className="w-full">
+              <Button className="w-full justify-center py-2.5">
+                Identificar ou Cadastrar-se
+              </Button>
+            </Link>
+            <Link to="/" className="text-xs text-slate-500 hover:text-slate-350 transition-colors">
+              Voltar para a Home
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
 
   return (
     <div className="flex flex-col gap-6 text-left">
