@@ -4,7 +4,7 @@ import { Breadcrumb } from '../../components/ui/Breadcrumb'
 import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { User, MapPin, Save, Ticket, RefreshCcw, Truck } from 'lucide-react'
-import { mockCoupons, mockExchanges, type Coupon, type Exchange, type Customer } from '../../mock/mockData'
+import { mockCoupons, mockExchanges, mockCustomers, type Coupon, type Exchange, type Customer } from '../../mock/mockData'
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
 import { Table } from '../../components/ui/Table'
 

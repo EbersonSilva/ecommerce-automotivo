@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { MessageCircle, X, Send, ShoppingCart, Bot, Sparkles } from 'lucide-react'
+import { MessageCircle, X, Send, ShoppingCart, Bot } from 'lucide-react'
 import { mockProducts, type Product } from '../mock/mockData'
 
 interface Message {
