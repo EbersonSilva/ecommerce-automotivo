@@ -1,0 +1,50 @@
+﻿ID;Módulo;Atividade;Otimista (h);Realista (h);Pessimista (h);Certeza :(;Certeza :|;Certeza :);PERT Esperado (h)
+1.1;Setup & Infra;Modelagem do diagrama ER e esquema relacional do banco;1,5;3,0;5,0;;X;;3,1
+1.2;Setup & Infra;Configuração do banco de dados (migrations, seeds e conexão);1,0;2,0;4,0;;;X;2,2
+1.3;Setup & Infra;Estruturação da arquitetura da API backend (rotas, controllers, services);1,5;2,5;4,0;;;X;2,6
+1.4;Setup & Infra;Configuração de CORS, padronização de retornos e tratamento de erros;0,5;1,0;2,0;;;X;1,1
+2.1;Autenticação;API: Implementação de login e geração de token JWT;1,5;2,5;4,5;;X;;2,7
+2.2;Autenticação;API: Middleware de autenticação e proteção de rotas (Admin vs Cliente);1,0;2,0;3,5;;X;;2,1
+2.3;Autenticação;Frontend: Gerenciamento de sessão/token e rotas protegidas;1,0;2,0;3,0;;;X;2,0
+3.1;Clientes;API: Modelagem e CRUD completo de Clientes;2,0;4,0;6,0;;;X;4,0
+3.2;Clientes;API: Regras de validação de CPF, e-mail único e complexidade de senha;1,0;2,0;3,5;;;X;2,1
+3.3;Clientes;API: Gestão de múltiplos endereços (Cobrança e Entrega) por cliente;1,5;3,0;5,0;;X;;3,1
+3.4;Clientes;API: Gestão de múltiplos cartões de crédito vinculados ao cliente;1,5;3,0;5,0;;X;;3,1
+3.5;Clientes;API: Fluxo de alteração de senha e inativação lógica de cliente;1,0;1,5;3,0;;;X;1,7
+3.6;Clientes;Frontend: Integração das telas de Auto-cadastro e Minha Conta com a API;2,0;4,0;7,0;;X;;4,2
+3.7;Clientes;Frontend: Integração da gestão de clientes no painel administrativo;1,5;3,0;5,0;;;X;3,1
+4.1;Produtos;API: Modelagem de Produtos, Categorias e Grupos de Precificação;1,0;2,0;3,5;;;X;2,1
+4.2;Produtos;API: CRUD de Produtos e cálculo de margem de lucro por grupo;2,0;4,0;6,0;;;X;4,0
+4.3;Produtos;API: Regras de inativação de produtos com justificativa obrigatória;0,5;1,0;2,0;;;X;1,1
+4.4;Produtos;Frontend: Integração do catálogo de peças, filtros e busca com API;1,5;3,0;5,0;;;X;3,1
+4.5;Produtos;Frontend: Integração das telas administrativas de cadastro/edição de produtos;1,5;3,0;5,0;;;X;3,1
+5.1;Estoque;API: Modelagem de movimentações de estoque (entrada, saída, lote e custo);1,0;2,0;3,5;;X;;2,1
+5.2;Estoque;API: Lógica de entrada de estoque e recálculo de preço médio/custo;1,5;2,5;4,5;;X;;2,7
+5.3;Estoque;API: Validação de estoque mínimo e baixa automática após venda;1,0;2,0;3,5;;;X;2,1
+5.4;Estoque;Frontend: Integração da tela administrativa de controle e histórico de estoque;1,5;2,5;4,0;;;X;2,6
+6.1;Carrinho & Reserva;API: Lógica de reserva temporária de estoque ao adicionar ao carrinho;2,0;4,0;7,0;X;;;4,2
+6.2;Carrinho & Reserva;API: Job/Timer de liberação de estoque expirado (carrinho abandonado);1,5;3,0;6,0;X;;;3,3
+6.3;Carrinho & Reserva;Frontend: Temporizador regressivo na tela do carrinho e sincronização;1,0;2,0;3,5;;X;;2,1
+7.1;Checkout & Pagamento;API: Endpoint de cálculo de frete por CEP/região e prazo de entrega;1,0;2,0;4,0;;X;;2,2
+7.2;Checkout & Pagamento;API: Validação de cupom promocional (máx. 1 por compra) e cupons de troca;1,0;2,5;4,5;;X;;2,6
+7.3;Checkout & Pagamento;API: Regra de pagamento com múltiplos cartões (valor mín. R$ 10 por cartão);1,5;3,0;5,5;;X;;3,2
+7.4;Checkout & Pagamento;API: Validação matemática do fechamento da compra (Itens + Frete - Cupons = Cartões);1,0;2,0;3,5;;;X;2,1
+7.5;Checkout & Pagamento;Frontend: Integração do fluxo completo de Checkout (Endereços, Frete, Pagamento);2,5;5,0;8,0;;X;;5,1
+8.1;Pedidos;API: Gravação transacional do pedido (snapshot de endereços, cartões e itens);2,0;3,5;6,0;;X;;3,7
+8.2;Pedidos;API: Máquina de estados do pedido (Processando -> Pago -> Em Transporte -> Entregue);1,5;2,5;4,5;;;X;2,7
+8.3;Pedidos;API: Endpoints de listagem e detalhes de pedidos (Cliente e Admin);1,0;2,0;3,0;;;X;2,0
+8.4;Pedidos;Frontend: Integração do histórico e detalhe do pedido do cliente;1,0;2,0;3,5;;;X;2,1
+8.5;Pedidos;Frontend: Integração da tela administrativa de alteração de status de pedidos;1,0;2,0;3,5;;;X;2,1
+9.1;Trocas & Devoluções;API: Solicitação de troca parcial ou total pelo cliente (apenas pedidos entregues);1,5;2,5;4,5;;X;;2,7
+9.2;Trocas & Devoluções;API: Fluxo admin de autorização/recusa e confirmação de recebimento de itens;1,5;3,0;5,0;;X;;3,1
+9.3;Trocas & Devoluções;API: Geração automática de Cupom de Troca vinculado ao cliente após recebimento;1,0;2,0;3,5;;;X;2,1
+9.4;Trocas & Devoluções;Frontend: Integração das ações de troca na área do cliente e no painel admin;1,5;3,0;5,0;;X;;3,1
+10.1;Relatórios;API: Query agregada de vendas por período e agrupamento por categoria/produto;2,0;4,0;7,0;X;;;4,2
+10.2;Relatórios;API: Endpoint parametrizado por data inicial, data final e tipo de análise;1,0;2,0;3,5;;;X;2,1
+10.3;Relatórios;Frontend: Integração dos filtros e renderização dinâmica dos gráficos de linha/barra;1,5;3,0;5,5;;X;;3,2
+11.1;Chatbot;API: Lógica de matching e busca inteligente de peças por modelo/ano do veículo;1,5;3,0;6,0;X;;;3,3
+11.2;Chatbot;Frontend: Integração do widget do Chatbot com a API e atalhos de compra rápida;1,0;2,0;4,0;;X;;2,2
+12.1;Testes & Entrega;Testes unitários e de integração das regras críticas (Checkout, Trocas e Estoque);2,5;5,0;8,0;;X;;5,1
+12.2;Testes & Entrega;Teste manual do fluxo ponta a ponta (cadastro até entrega e troca);1,5;3,0;5,0;;;X;3,1
+12.3;Testes & Entrega;Documentação técnica, roteiro de testes e preparação da apresentação;1,5;3,0;5,0;;;X;3,1
+TOTAL;TOTAIS GERAIS;Soma total de horas estimadas e contagem de incertezas;60,5;118,5;199,5;4;17;18;122,2
