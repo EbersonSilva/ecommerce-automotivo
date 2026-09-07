@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { mockCustomers } from '../../mock/mockData'
 import type { Customer } from '../../mock/mockData'
@@ -8,28 +8,58 @@ import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Modal } from '../../components/ui/Modal'
-import { Plus, Eye, Edit2, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Plus, Eye, Edit2, ToggleLeft, ToggleRight, RefreshCw } from 'lucide-react'
+import { getCustomers, updateCustomerStatus } from '../../services/customerService'
 
+/**
+ * ==============================================================================
+ * TELA: GESTÃO DE CLIENTES (Painel Admin)
+ * ==============================================================================
+ * Esta tela consulta todos os clientes cadastrados no banco PostgreSQL via API.
+ * Permite filtrar por texto, por status (Ativo/Inativo), paginar e alternar status.
+ */
 export const Customers = () => {
-  const [customers, setCustomers] = useState<Customer[]>(() => {
-    try {
-      const saved = localStorage.getItem('custom-customers')
-      return saved ? JSON.parse(saved) : mockCustomers
-    } catch {
-      return mockCustomers
-    }
-  })
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isUsingApi, setIsUsingApi] = useState(false)
 
-  // States
+  // Estados de Filtro e Paginação
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
 
-  // Modal State for Toggle Status
+  // Estado do Modal de Confirmação para Ativar/Inativar
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [targetCustomer, setTargetCustomer] = useState<Customer | null>(null)
 
+  /**
+   * FUNÇÃO: Carregar clientes da API (PostgreSQL)
+   * Se a API estiver offline, faz fallback para o localStorage/mockData
+   */
+  const loadCustomers = async () => {
+    setIsLoading(true)
+    try {
+      // 1. Tenta carregar do PostgreSQL via Backend
+      const data = await getCustomers()
+      setCustomers(data)
+      setIsUsingApi(true)
+    } catch (err) {
+      console.warn('⚠️ Backend offline ou inacessível. Usando armazenamento local temporário.', err)
+      setIsUsingApi(false)
+      const saved = localStorage.getItem('custom-customers')
+      setCustomers(saved ? JSON.parse(saved) : mockCustomers)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Executa o carregamento inicial assim que a tela abre
+  useEffect(() => {
+    loadCustomers()
+  }, [])
+
+  // Filtra os clientes dinamicamente conforme digitação ou seleção de status
   const filteredCustomers = useMemo(() => {
     return customers.filter((c) => {
       const matchesSearch = 
@@ -43,52 +73,84 @@ export const Customers = () => {
     })
   }, [customers, search, statusFilter])
 
-  const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage)
+  // Lógica de Paginação em Memória
+  const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage) || 1
   const paginatedCustomers = useMemo(() => {
     const startIdx = (currentPage - 1) * itemsPerPage
     return filteredCustomers.slice(startIdx, startIdx + itemsPerPage)
   }, [filteredCustomers, currentPage])
 
+  // Abre o modal de confirmação
   const openToggleModal = (customer: Customer) => {
     setTargetCustomer(customer)
     setIsModalOpen(true)
   }
 
-  const handleToggleStatus = () => {
+  /**
+   * FUNÇÃO: Alternar status (Ativar / Inativar) no PostgreSQL
+   */
+  const handleToggleStatus = async () => {
     if (!targetCustomer) return
+    const nextStatus = targetCustomer.status === 'Ativo' ? 'Inativo' : 'Ativo'
 
-    const updated = customers.map((c) => {
-      if (c.id === targetCustomer.id) {
-        return {
-          ...c,
-          status: c.status === 'Ativo' ? 'Inativo' : 'Ativo' as 'Ativo' | 'Inativo'
-        }
+    try {
+      if (isUsingApi) {
+        // Atualiza no PostgreSQL via PATCH
+        await updateCustomerStatus(targetCustomer.id, nextStatus)
+        // Recarrega lista atualizada do banco
+        await loadCustomers()
+      } else {
+        // Fallback local
+        const updated = customers.map((c) => {
+          if (c.id === targetCustomer.id) {
+            return { ...c, status: nextStatus as 'Ativo' | 'Inativo' }
+          }
+          return c
+        })
+        setCustomers(updated)
+        localStorage.setItem('custom-customers', JSON.stringify(updated))
       }
-      return c
-    })
-
-    setCustomers(updated)
-    localStorage.setItem('custom-customers', JSON.stringify(updated))
-    setIsModalOpen(false)
-    setTargetCustomer(null)
+    } catch (err: any) {
+      alert(`Falha ao alterar status: ${err.message}`)
+    } finally {
+      setIsModalOpen(false)
+      setTargetCustomer(null)
+    }
   }
 
   return (
     <div className="flex flex-col gap-6 text-left">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight">Gestão de Clientes</h1>
-          <p className="text-xs text-slate-500 font-medium">Cadastre, edite e ative/inative clientes da base</p>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-black text-white tracking-tight">Gestão de Clientes</h1>
+            {isUsingApi ? (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                ● PostgreSQL Conectado
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                ● Modo Local (Off-line)
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-slate-500 font-medium">Cadastre, edite e ative/inative clientes da base de dados</p>
         </div>
-        <Link to="/admin/clientes/novo">
-          <Button className="gap-2">
-            <Plus className="w-4 h-4" />
-            Novo Cliente
+        <div className="flex items-center gap-2">
+          <Button onClick={loadCustomers} variant="secondary" size="sm" className="gap-1.5" title="Atualizar Lista">
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            Recarregar
           </Button>
-        </Link>
+          <Link to="/admin/clientes/novo">
+            <Button className="gap-2">
+              <Plus className="w-4 h-4" />
+              Novo Cliente
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      {/* Filter and Search Bar */}
+      {/* Barra de Filtros e Pesquisa */}
       <div className="bg-slate-900/40 border border-slate-900 p-5 rounded-2xl flex flex-col sm:flex-row gap-4 items-end backdrop-blur-sm shadow-md">
         <div className="flex-1 w-full">
           <Input
@@ -118,7 +180,7 @@ export const Customers = () => {
         </div>
       </div>
 
-      {/* Customers Data Table */}
+      {/* Tabela de Dados */}
       {paginatedCustomers.length > 0 ? (
         <Table headers={['Código', 'Nome', 'CPF', 'E-mail', 'Telefone', 'Status', 'Ações']}>
           {paginatedCustomers.map((cust) => (
@@ -174,12 +236,14 @@ export const Customers = () => {
       ) : (
         <div className="bg-slate-900/10 border border-slate-900/60 rounded-3xl p-16 text-center">
           <span className="text-3xl block mb-4">👥</span>
-          <h3 className="text-base font-bold text-slate-200 mb-1">Nenhum cliente cadastrado</h3>
-          <p className="text-xs text-slate-500">Tente ajustar seus critérios de busca.</p>
+          <h3 className="text-base font-bold text-slate-200 mb-1">
+            {isLoading ? 'Carregando clientes...' : 'Nenhum cliente encontrado'}
+          </h3>
+          <p className="text-xs text-slate-500">Tente ajustar seus critérios de busca ou cadastre um novo cliente.</p>
         </div>
       )}
 
-      {/* Pagination */}
+      {/* Paginação */}
       {totalPages > 1 && (
         <div className="flex justify-between items-center w-full mt-2">
           <span className="text-xs text-slate-500 font-medium">
@@ -219,7 +283,7 @@ export const Customers = () => {
         </div>
       )}
 
-      {/* Confirmation Modal */}
+      {/* Modal de Confirmação de Alteração de Status */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => {

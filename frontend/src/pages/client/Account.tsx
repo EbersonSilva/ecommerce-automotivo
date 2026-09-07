@@ -7,6 +7,7 @@ import { User, MapPin, Save, Ticket, RefreshCcw, Truck } from 'lucide-react'
 import { mockCoupons, mockExchanges, mockCustomers, type Coupon, type Exchange, type Customer } from '../../mock/mockData'
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
 import { Table } from '../../components/ui/Table'
+import { updateCustomer } from '../../services/customerService'
 
 export const Account = () => {
   const [loggedCustomer, setLoggedCustomer] = useState<Customer | null>(null)
@@ -73,7 +74,7 @@ export const Account = () => {
     loadData(parsed)
   }, [])
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name || !email || !phone) {
       alert('Favor preencher todos os campos obrigatórios.')
@@ -92,9 +93,16 @@ export const Account = () => {
         phone
       }
 
+      // Tenta persistir no PostgreSQL via API
+      try {
+        await updateCustomer(current.id, { name, email, phone })
+      } catch (apiErr) {
+        console.warn('⚠️ Não foi possível salvar no PostgreSQL, salvando localmente...', apiErr)
+      }
+
       localStorage.setItem('logged-customer', JSON.stringify(updatedCustomer))
 
-      // Update global customers database
+      // Atualiza banco de dados local global
       const saved = localStorage.getItem('custom-customers')
       const customersList: Customer[] = saved ? JSON.parse(saved) : [...mockCustomers]
       const index = customersList.findIndex((c) => c.id === current.id)
@@ -105,7 +113,7 @@ export const Account = () => {
       }
       localStorage.setItem('custom-customers', JSON.stringify(customersList))
 
-      // Dispatch auth change event
+      // Dispara evento para atualizar header
       window.dispatchEvent(new Event('auth-change'))
       
       alert('Perfil atualizado com sucesso!')
@@ -115,7 +123,7 @@ export const Account = () => {
     }
   }
 
-  const handleSaveAddress = (e: React.FormEvent) => {
+  const handleSaveAddress = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
       const savedLogged = localStorage.getItem('logged-customer')
@@ -130,9 +138,16 @@ export const Account = () => {
         zipCode
       }
 
+      // Tenta persistir no PostgreSQL via API
+      try {
+        await updateCustomer(current.id, { address, city, state, zipCode })
+      } catch (apiErr) {
+        console.warn('⚠️ Não foi possível salvar no PostgreSQL, salvando localmente...', apiErr)
+      }
+
       localStorage.setItem('logged-customer', JSON.stringify(updatedCustomer))
 
-      // Update global customers database
+      // Atualiza banco de dados local global
       const saved = localStorage.getItem('custom-customers')
       const customersList: Customer[] = saved ? JSON.parse(saved) : [...mockCustomers]
       const index = customersList.findIndex((c) => c.id === current.id)

@@ -5,38 +5,67 @@ import type { Customer, Order } from '../../mock/mockData'
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { ArrowLeft, User, MapPin, ClipboardList, Calendar } from 'lucide-react'
+import { getCustomerById } from '../../services/customerService'
 
+/**
+ * ==============================================================================
+ * TELA: DETALHES DO CLIENTE (Painel Admin)
+ * ==============================================================================
+ * Exibe a ficha cadastral do cliente direto do banco PostgreSQL e seus pedidos.
+ */
 export const CustomerDetail = () => {
   const { id } = useParams<{ id: string }>()
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    try {
-      const savedCusts = localStorage.getItem('custom-customers')
-      const custList = savedCusts ? JSON.parse(savedCusts) : mockCustomers
-      const found = custList.find((c: Customer) => c.id === id)
-      setCustomer(found || null)
+    if (!id) return
 
-      const savedOrders = localStorage.getItem('custom-orders')
-      const ordersList = savedOrders ? JSON.parse(savedOrders) : []
-      const combinedOrders = [...ordersList, ...mockOrders]
+    const loadData = async () => {
+      setIsLoading(true)
+      try {
+        // 1. Tenta carregar os dados cadastrais do PostgreSQL
+        const found = await getCustomerById(id)
+        setCustomer(found)
 
-      // Filter orders related to this customer (or match by name if custom)
-      if (found) {
+        // Carrega pedidos vinculados a este cliente
+        const savedOrders = localStorage.getItem('custom-orders')
+        const ordersList = savedOrders ? JSON.parse(savedOrders) : []
+        const combinedOrders = [...ordersList, ...mockOrders]
+
         const filtered = combinedOrders.filter(
           (o) => o.customerId === found.id || o.customerName === found.name
         )
         setOrders(filtered)
-      }
-    } catch {
-      const found = mockCustomers.find((c) => c.id === id)
-      setCustomer(found || null)
-      if (found) {
-        setOrders(mockOrders.filter((o) => o.customerId === found.id))
+      } catch (err) {
+        console.warn('⚠️ Fallback para busca local do cliente...', err)
+        const savedCusts = localStorage.getItem('custom-customers')
+        const custList = savedCusts ? JSON.parse(savedCusts) : mockCustomers
+        const found = custList.find((c: Customer) => c.id === id) || mockCustomers.find((c) => c.id === id)
+        setCustomer(found || null)
+
+        if (found) {
+          const savedOrders = localStorage.getItem('custom-orders')
+          const ordersList = savedOrders ? JSON.parse(savedOrders) : []
+          const combined = [...ordersList, ...mockOrders]
+          setOrders(combined.filter((o) => o.customerId === found.id || o.customerName === found.name))
+        }
+      } finally {
+        setIsLoading(false)
       }
     }
+
+    loadData()
   }, [id])
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-20 text-slate-400">
+        <p className="text-sm">Carregando dados do cliente do PostgreSQL...</p>
+      </div>
+    )
+  }
 
   if (!customer) {
     return (
@@ -78,9 +107,9 @@ export const CustomerDetail = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-4 items-start">
-        {/* Left Columns: Customer metadata cards */}
+        {/* Metadados do Cliente */}
         <div className="flex flex-col gap-6">
-          {/* Personal Info Card */}
+          {/* Card de Dados Pessoais */}
           <div className="bg-slate-900/40 border border-slate-900 p-6 rounded-2xl backdrop-blur-sm shadow-xl space-y-4">
             <h4 className="font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 text-xs pb-3 border-b border-slate-850">
               <User className="w-4.5 h-4.5 text-indigo-400" />
@@ -106,7 +135,7 @@ export const CustomerDetail = () => {
             </div>
           </div>
 
-          {/* Delivery Address Card */}
+          {/* Card de Endereço */}
           <div className="bg-slate-900/40 border border-slate-900 p-6 rounded-2xl backdrop-blur-sm shadow-xl text-xs">
             <h4 className="font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5 pb-2 border-b border-slate-850">
               <MapPin className="w-4 h-4 text-indigo-400" />
@@ -124,7 +153,7 @@ export const CustomerDetail = () => {
           </div>
         </div>
 
-        {/* Right Side: Order history */}
+        {/* Histórico de Compras */}
         <div className="md:col-span-2 bg-slate-900/40 border border-slate-900 p-6 rounded-3xl backdrop-blur-sm shadow-xl flex flex-col gap-4">
           <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider pb-3 border-b border-slate-850 flex items-center gap-2">
             <ClipboardList className="w-4.5 h-4.5 text-indigo-400" />

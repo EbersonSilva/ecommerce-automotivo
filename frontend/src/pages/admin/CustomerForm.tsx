@@ -6,13 +6,20 @@ import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Button } from '../../components/ui/Button'
 import { ArrowLeft, Save, UserPlus } from 'lucide-react'
+import { getCustomerById, createCustomer, updateCustomer } from '../../services/customerService'
 
+/**
+ * ==============================================================================
+ * TELA: FORMULÁRIO DE CLIENTE (Cadastro e Edição no Painel Admin)
+ * ==============================================================================
+ * Permite cadastrar um novo cliente ou editar um existente diretamente no PostgreSQL.
+ */
 export const CustomerForm = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const isEdit = !!id
 
-  // Form Fields State
+  // Campos do Formulário
   const [name, setName] = useState('')
   const [cpf, setCpf] = useState('')
   const [email, setEmail] = useState('')
@@ -24,15 +31,15 @@ export const CustomerForm = () => {
   const [state, setState] = useState('')
   const [zipCode, setZipCode] = useState('')
 
-  // Load existing data if edit mode
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Carrega os dados do cliente se estiver no modo Edição (isEdit = true)
   useEffect(() => {
-    if (isEdit) {
-      try {
-        const saved = localStorage.getItem('custom-customers')
-        const list = saved ? JSON.parse(saved) : mockCustomers
-        const found = list.find((c: Customer) => c.id === id)
-        
-        if (found) {
+    if (isEdit && id) {
+      const loadCustomerData = async () => {
+        try {
+          // 1. Tenta buscar da API do PostgreSQL
+          const found = await getCustomerById(id)
           setName(found.name)
           setCpf(found.cpf)
           setEmail(found.email)
@@ -42,70 +49,93 @@ export const CustomerForm = () => {
           setCity(found.city || '')
           setState(found.state || '')
           setZipCode(found.zipCode || '')
+        } catch (err) {
+          console.warn('⚠️ Não foi possível carregar via API, tentando fallback local...', err)
+          const saved = localStorage.getItem('custom-customers')
+          const list = saved ? JSON.parse(saved) : mockCustomers
+          const found = list.find((c: Customer) => c.id === id)
+          if (found) {
+            setName(found.name)
+            setCpf(found.cpf)
+            setEmail(found.email)
+            setPhone(found.phone)
+            setStatus(found.status)
+            setAddress(found.address || '')
+            setCity(found.city || '')
+            setState(found.state || '')
+            setZipCode(found.zipCode || '')
+          }
         }
-      } catch (err) {
-        console.error(err)
       }
+      loadCustomerData()
     }
   }, [id, isEdit])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  /**
+   * FUNÇÃO: Salvar Cadastro (Criação ou Edição)
+   */
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!name || !cpf || !email || !phone) {
-      alert('Favor preencher todos os campos obrigatórios.')
+      alert('Favor preencher todos os campos obrigatórios (*).')
       return
     }
 
-    try {
-      const saved = localStorage.getItem('custom-customers')
-      const list: Customer[] = saved ? JSON.parse(saved) : [...mockCustomers]
+    setIsSubmitting(true)
 
-      if (isEdit) {
-        // Edit customer
-        const updated = list.map((c) => {
-          if (c.id === id) {
-            return {
-              ...c,
-              name,
-              cpf,
-              email,
-              phone,
-              status,
-              address,
-              city,
-              state,
-              zipCode
-            }
-          }
-          return c
-        })
-        localStorage.setItem('custom-customers', JSON.stringify(updated))
-        alert('Cadastro do cliente atualizado com sucesso!')
+    const customerPayload = {
+      name,
+      cpf,
+      email,
+      phone,
+      status,
+      address,
+      city,
+      state,
+      zipCode
+    }
+
+    try {
+      if (isEdit && id) {
+        // Atualiza cliente existente no PostgreSQL (PUT /api/clientes/:id)
+        await updateCustomer(id, customerPayload)
+        alert('Cadastro do cliente atualizado com sucesso no banco de dados!')
       } else {
-        // Create new customer
-        const newCustomer: Customer = {
-          id: String(list.length + 1),
-          code: `CLI-${String(list.length + 1).padStart(4, '0')}`,
-          name,
-          cpf,
-          email,
-          phone,
-          status,
-          address,
-          city,
-          state,
-          zipCode
-        }
-        list.push(newCustomer)
-        localStorage.setItem('custom-customers', JSON.stringify(list))
-        alert('Novo cliente cadastrado com sucesso!')
+        // Cria novo cliente no PostgreSQL (POST /api/clientes)
+        await createCustomer(customerPayload)
+        alert('Novo cliente cadastrado com sucesso no banco de dados!')
       }
 
       navigate('/admin/clientes')
-    } catch (err) {
-      console.error(err)
-      alert('Falha ao gravar registro.')
+    } catch (err: any) {
+      console.warn('⚠️ Tentando fallback local devido a erro na API:', err)
+      
+      // Fallback local se a API estiver indisponível
+      try {
+        const saved = localStorage.getItem('custom-customers')
+        const list: Customer[] = saved ? JSON.parse(saved) : [...mockCustomers]
+
+        if (isEdit) {
+          const updated = list.map((c) => (c.id === id ? { ...c, ...customerPayload } : c))
+          localStorage.setItem('custom-customers', JSON.stringify(updated))
+          alert('Cadastro atualizado localmente!')
+        } else {
+          const newCustomer: Customer = {
+            id: String(list.length + 1),
+            code: `CLI-${String(list.length + 1).padStart(4, '0')}`,
+            ...customerPayload
+          }
+          list.push(newCustomer)
+          localStorage.setItem('custom-customers', JSON.stringify(list))
+          alert('Novo cliente salvo localmente!')
+        }
+        navigate('/admin/clientes')
+      } catch (localErr) {
+        alert(`Erro ao gravar registro: ${err.message}`)
+      }
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -124,12 +154,12 @@ export const CustomerForm = () => {
           {isEdit ? 'Editar Cliente' : 'Cadastrar Cliente'}
         </h1>
         <p className="text-xs text-slate-500 font-medium">
-          {isEdit ? 'Atualize as informações cadastrais do cliente' : 'Adicione um novo cliente à base de dados da autopeças'}
+          {isEdit ? 'Atualize as informações cadastrais do cliente no PostgreSQL' : 'Adicione um novo cliente à base de dados da autopeças'}
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start mt-2">
-        {/* Section: Personal Info */}
+        {/* Seção 1: Informações Pessoais */}
         <div className="bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-6">
           <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider pb-3 border-b border-slate-850 flex items-center gap-2">
             <UserPlus className="w-4.5 h-4.5 text-indigo-400" />
@@ -181,7 +211,7 @@ export const CustomerForm = () => {
           />
         </div>
 
-        {/* Section: Delivery Details */}
+        {/* Seção 2: Endereço de Entrega */}
         <div className="bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-6 justify-between h-full">
           <div className="flex flex-col gap-6">
             <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider pb-3 border-b border-slate-850">
@@ -219,9 +249,9 @@ export const CustomerForm = () => {
           </div>
 
           <div className="flex justify-end mt-8 border-t border-slate-850 pt-6">
-            <Button type="submit" className="gap-2 px-8 py-3">
+            <Button type="submit" disabled={isSubmitting} className="gap-2 px-8 py-3">
               <Save className="w-4 h-4" />
-              Salvar Cadastro
+              {isSubmitting ? 'Salvando...' : 'Salvar Cadastro'}
             </Button>
           </div>
         </div>

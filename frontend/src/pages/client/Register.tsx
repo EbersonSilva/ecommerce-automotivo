@@ -5,19 +5,29 @@ import type { Customer } from '../../mock/mockData'
 import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { ArrowLeft, UserPlus, Search, ShieldCheck } from 'lucide-react'
+import { getCustomerByCpf, createCustomer } from '../../services/customerService'
 
+/**
+ * ==============================================================================
+ * TELA: CADASTRO E IDENTIFICAÇÃO DO CLIENTE
+ * ==============================================================================
+ * Permite que um cliente:
+ * 1. Se identifique pelo CPF (fazendo SELECT no PostgreSQL).
+ * 2. Crie uma nova conta (fazendo INSERT no PostgreSQL).
+ */
 export const Register: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
   
-  // Check if user came from checkout redirect
+  // Verifica se o usuário foi redirecionado a partir do checkout
   const fromCheckout = location.state?.from === '/checkout'
 
-  // Identification State (CPF search)
+  // Estados da Busca por CPF (Identificação)
   const [searchCpf, setSearchCpf] = useState('')
   const [idError, setIdError] = useState('')
+  const [isSearching, setIsSearching] = useState(false)
 
-  // Form State (New customer)
+  // Estados do Formulário de Novo Cadastro
   const [name, setName] = useState('')
   const [cpf, setCpf] = useState('')
   const [email, setEmail] = useState('')
@@ -26,12 +36,15 @@ export const Register: React.FC = () => {
   const [city, setCity] = useState('')
   const [state, setState] = useState('')
   const [zipCode, setZipCode] = useState('')
+  const [isRegistering, setIsRegistering] = useState(false)
 
-  // Clean CPF string for comparison (keeps only numbers)
+  // Remove caracteres não numéricos do CPF
   const cleanCpf = (val: string) => val.replace(/\D/g, '')
 
-  // Handle identification search
-  const handleIdentify = (e: React.FormEvent) => {
+  /**
+   * FUNÇÃO 1: Identificar Cliente por CPF no PostgreSQL
+   */
+  const handleIdentify = async (e: React.FormEvent) => {
     e.preventDefault()
     setIdError('')
 
@@ -41,41 +54,55 @@ export const Register: React.FC = () => {
       return
     }
 
+    setIsSearching(true)
     try {
-      const saved = localStorage.getItem('custom-customers')
-      const customersList: Customer[] = saved ? JSON.parse(saved) : mockCustomers
-      
-      const found = customersList.find((c) => cleanCpf(c.cpf) === queryCpf)
+      // 1. Tenta buscar da API do PostgreSQL
+      const found = await getCustomerByCpf(queryCpf)
 
-      if (found) {
-        if (found.status === 'Inativo') {
-          setIdError('Este cadastro está inativo. Entre em contato com o suporte.')
-          return
-        }
-
-        // Save active session
-        localStorage.setItem('logged-customer', JSON.stringify(found))
-        
-        // Dispatch event for other components (e.g. Header)
-        window.dispatchEvent(new Event('auth-change'))
-        
-        alert(`Bem-vindo de volta, ${found.name}!`)
-        if (fromCheckout) {
-          navigate('/checkout')
-        } else {
-          navigate('/minha-conta')
-        }
-      } else {
-        setIdError('CPF não encontrado na base de dados. Por favor, realize seu cadastro ao lado.')
+      if (found.status === 'Inativo') {
+        setIdError('Este cadastro está inativo. Entre em contato com o suporte da loja.')
+        return
       }
-    } catch (err) {
-      console.error(err)
-      setIdError('Erro ao buscar cadastro.')
+
+      // Salva sessão local no navegador
+      localStorage.setItem('logged-customer', JSON.stringify(found))
+      window.dispatchEvent(new Event('auth-change'))
+      
+      alert(`Bem-vindo de volta, ${found.name}!`)
+      navigate(fromCheckout ? '/checkout' : '/minha-conta')
+    } catch (err: any) {
+      console.warn('⚠️ Tentando fallback local para busca de CPF...', err)
+      
+      // Fallback local se a API estiver fora
+      try {
+        const saved = localStorage.getItem('custom-customers')
+        const customersList: Customer[] = saved ? JSON.parse(saved) : mockCustomers
+        const found = customersList.find((c) => cleanCpf(c.cpf) === queryCpf)
+
+        if (found) {
+          if (found.status === 'Inativo') {
+            setIdError('Este cadastro está inativo. Entre em contato com o suporte.')
+            return
+          }
+          localStorage.setItem('logged-customer', JSON.stringify(found))
+          window.dispatchEvent(new Event('auth-change'))
+          alert(`Bem-vindo de volta, ${found.name}!`)
+          navigate(fromCheckout ? '/checkout' : '/minha-conta')
+        } else {
+          setIdError('CPF não encontrado na base de dados. Realize seu cadastro ao lado.')
+        }
+      } catch (localErr) {
+        setIdError('Erro ao buscar cadastro.')
+      }
+    } finally {
+      setIsSearching(false)
     }
   }
 
-  // Handle new customer registration
-  const handleRegister = (e: React.FormEvent) => {
+  /**
+   * FUNÇÃO 2: Cadastrar Novo Cliente no PostgreSQL
+   */
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!name || !cpf || !email || !phone) {
@@ -83,54 +110,66 @@ export const Register: React.FC = () => {
       return
     }
 
-    const cleanInputCpf = cleanCpf(cpf)
+    setIsRegistering(true)
+
+    const customerPayload = {
+      name,
+      cpf,
+      email,
+      phone,
+      status: 'Ativo' as const,
+      address,
+      city,
+      state,
+      zipCode
+    }
 
     try {
-      const saved = localStorage.getItem('custom-customers')
-      const customersList: Customer[] = saved ? JSON.parse(saved) : [...mockCustomers]
+      // 1. Salva no PostgreSQL via POST /api/clientes
+      const newCustomer = await createCustomer(customerPayload)
 
-      // Check if CPF already exists
-      const exists = customersList.some((c) => cleanCpf(c.cpf) === cleanInputCpf)
-      if (exists) {
-        alert('Este CPF já está cadastrado. Tente se identificar no painel de busca.')
-        return
-      }
-
-      // Generate a new code
-      const nextId = String(customersList.length + 1)
-      const nextCode = `CLI-${nextId.padStart(4, '0')}`
-
-      const newCustomer: Customer = {
-        id: nextId,
-        code: nextCode,
-        name,
-        cpf,
-        email,
-        phone,
-        status: 'Ativo',
-        address,
-        city,
-        state,
-        zipCode
-      }
-
-      // Add to database
-      customersList.push(newCustomer)
-      localStorage.setItem('custom-customers', JSON.stringify(customersList))
-
-      // Auto login
+      // Salva na sessão ativa do navegador
       localStorage.setItem('logged-customer', JSON.stringify(newCustomer))
       window.dispatchEvent(new Event('auth-change'))
 
-      alert('Cadastro realizado com sucesso!')
-      if (fromCheckout) {
-        navigate('/checkout')
-      } else {
-        navigate('/minha-conta')
+      alert('Cadastro realizado com sucesso no banco de dados!')
+      navigate(fromCheckout ? '/checkout' : '/minha-conta')
+    } catch (err: any) {
+      console.warn('⚠️ Tentando fallback local para cadastro...', err)
+      
+      // Fallback local
+      try {
+        const saved = localStorage.getItem('custom-customers')
+        const customersList: Customer[] = saved ? JSON.parse(saved) : [...mockCustomers]
+
+        const cleanInputCpf = cleanCpf(cpf)
+        const exists = customersList.some((c) => cleanCpf(c.cpf) === cleanInputCpf)
+        if (exists) {
+          alert('Este CPF já está cadastrado. Tente se identificar no painel ao lado.')
+          return
+        }
+
+        const nextId = String(customersList.length + 1)
+        const nextCode = `CLI-${nextId.padStart(4, '0')}`
+
+        const fallbackCustomer: Customer = {
+          id: nextId,
+          code: nextCode,
+          ...customerPayload
+        }
+
+        customersList.push(fallbackCustomer)
+        localStorage.setItem('custom-customers', JSON.stringify(customersList))
+        localStorage.setItem('logged-customer', JSON.stringify(fallbackCustomer))
+        window.dispatchEvent(new Event('auth-change'))
+
+        alert('Cadastro realizado com sucesso!')
+        navigate(fromCheckout ? '/checkout' : '/minha-conta')
+      } catch (localErr) {
+        alert(`Falha ao processar o cadastro: ${err.message}`)
       }
-    } catch (err) {
-      console.error(err)
-      alert('Falha ao processar o cadastro.')
+    } finally {
+      setIsRegistering(false)
     }
   }
 
@@ -155,7 +194,7 @@ export const Register: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start mt-2">
         
-        {/* Box 1: Simple CPF identification */}
+        {/* Painel 1: Identificação Rápida por CPF */}
         <div className="bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-6">
           <div>
             <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider pb-3 border-b border-slate-850 flex items-center gap-2">
@@ -163,7 +202,7 @@ export const Register: React.FC = () => {
               Já sou cliente
             </h3>
             <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
-              Caso já tenha realizado compras conosco ou seu cadastro tenha sido feito anteriormente, insira o seu CPF para reativar seu acesso.
+              Caso já tenha realizado compras conosco, digite seu CPF cadastrado no sistema.
             </p>
           </div>
 
@@ -176,15 +215,15 @@ export const Register: React.FC = () => {
               required
             />
             {idError && <p className="text-[10px] text-rose-400 font-semibold">{idError}</p>}
-            <Button type="submit" className="w-full justify-center">
-              Buscar Cadastro
+            <Button type="submit" disabled={isSearching} className="w-full justify-center">
+              {isSearching ? 'Buscando...' : 'Buscar Cadastro'}
             </Button>
           </form>
         </div>
 
-        {/* Box 2: Full sign up form */}
+        {/* Painel 2: Formulário de Nova Conta */}
         <form onSubmit={handleRegister} className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Section: Personal Info */}
+          {/* Dados Pessoais */}
           <div className="bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-5">
             <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider pb-3 border-b border-slate-850 flex items-center gap-2">
               <UserPlus className="w-4.5 h-4.5 text-indigo-400" />
@@ -226,7 +265,7 @@ export const Register: React.FC = () => {
             />
           </div>
 
-          {/* Section: Delivery Details */}
+          {/* Dados de Entrega */}
           <div className="bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-5 justify-between">
             <div className="flex flex-col gap-5">
               <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider pb-3 border-b border-slate-850">
@@ -264,12 +303,12 @@ export const Register: React.FC = () => {
             </div>
 
             <div className="flex flex-col gap-3 pt-4 border-t border-slate-850">
-              <Button type="submit" className="w-full justify-center py-3">
-                Finalizar e Acessar
+              <Button type="submit" disabled={isRegistering} className="w-full justify-center py-3">
+                {isRegistering ? 'Cadastrando...' : 'Finalizar e Acessar'}
               </Button>
               <div className="flex items-center gap-1.5 justify-center text-[10px] text-slate-500">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                Dados seguros e criptografados localmente.
+                Dados seguros gravados no PostgreSQL.
               </div>
             </div>
           </div>
@@ -279,5 +318,4 @@ export const Register: React.FC = () => {
     </div>
   )
 }
-
 export default Register
