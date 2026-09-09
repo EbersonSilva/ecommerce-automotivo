@@ -24,7 +24,7 @@ export async function getCustomers(): Promise<Customer[]> {
     }
     return await response.json()
   } catch (error) {
-    console.error('❌ Falha ao buscar clientes da API:', error)
+    console.error('Falha ao buscar clientes da API:', error)
     throw error
   }
 }
@@ -39,7 +39,7 @@ export async function getCustomerById(id: string): Promise<Customer> {
     }
     return await response.json()
   } catch (error) {
-    console.error(`❌ Falha ao buscar cliente ID ${id}:`, error)
+    console.error(`Falha ao buscar cliente ID ${id}:`, error)
     throw error
   }
 }
@@ -54,7 +54,7 @@ export async function getCustomerByCpf(cpf: string): Promise<Customer> {
     }
     return await response.json()
   } catch (error) {
-    console.error(`❌ Falha ao buscar cliente por CPF:`, error)
+    console.error(`Falha ao buscar cliente por CPF:`, error)
     throw error
   }
 }
@@ -77,7 +77,7 @@ export async function createCustomer(customerData: Omit<Customer, 'id' | 'code'>
 
     return await response.json()
   } catch (error) {
-    console.error('❌ Falha ao criar cliente:', error)
+    console.error('Falha ao criar cliente:', error)
     throw error
   }
 }
@@ -129,18 +129,18 @@ export async function updateCustomerStatus(id: string, status: 'Ativo' | 'Inativ
 }
 
 // 7. Excluir cliente do banco de dados
-export async function deleteCustomer(id: string): Promise<void> {
-  try {
-    const response = await fetch(`${API_URL}/${id}`, {
-      method: 'DELETE',
-    })
+// export async function deleteCustomer(id: string): Promise<void> {
+//   try {
+//     const response = await fetch(`${API_URL}/${id}`, {
+//       method: 'DELETE',
+//     })
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.error || 'Falha ao excluir cliente.')
-    }
-  } catch (error) {
-    console.error(`❌ Falha ao excluir cliente ID ${id}:`, error)
-    throw error
-  }
-}
+//     if (!response.ok) {
+//       const errorData = await response.json().catch(() => ({}))
+//       throw new Error(errorData.error || 'Falha ao excluir cliente.')
+//     }
+//   } catch (error) {
+//     console.error(`❌ Falha ao excluir cliente ID ${id}:`, error)
+//     throw error
+//   }
+// }

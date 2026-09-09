@@ -6,7 +6,7 @@ import {
   createCustomer,
   updateCustomer,
   updateCustomerStatus,
-  deleteCustomer
+  // deleteCustomer
 } from '../controllers/customerController.js'
 
 const router = Router()
@@ -38,6 +38,6 @@ router.put('/:id', updateCustomer)
 router.patch('/:id/status', updateCustomerStatus)
 
 // DELETE /api/clientes/:id -> Exclui um cliente do banco
-router.delete('/:id', deleteCustomer)
+// router.delete('/:id', deleteCustomer)
 
 export default router

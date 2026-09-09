@@ -181,6 +181,7 @@ export const CustomerForm = () => {
               onChange={(e) => setCpf(e.target.value)}
               placeholder="000.000.000-00"
               required
+              disabled={isEdit}
             />
             <Input
               label="Telefone *"
@@ -189,6 +190,7 @@ export const CustomerForm = () => {
               placeholder="(00) 00000-0000"
               required
             />
+            
           </div>
 
           <Input

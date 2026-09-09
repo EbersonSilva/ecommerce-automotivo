@@ -203,22 +203,21 @@ export const createCustomer = async (req: Request, res: Response): Promise<void>
 export const updateCustomer = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params
-    const { name, cpf, email, phone, status, address, city, state, zipCode } = req.body
+    const { name, email, phone, status, address, city, state, zipCode } = req.body
 
     const sql = `
       UPDATE clientes
       SET 
         nome = COALESCE($1, nome),
-        cpf = COALESCE($2, cpf),
-        email = COALESCE($3, email),
-        telefone = COALESCE($4, telefone),
-        status = COALESCE($5, status),
-        endereco = COALESCE($6, endereco),
-        cidade = COALESCE($7, cidade),
-        estado = COALESCE($8, estado),
-        cep = COALESCE($9, cep),
+        email = COALESCE($2, email),
+        telefone = COALESCE($3, telefone),
+        status = COALESCE($4, status),
+        endereco = COALESCE($5, endereco),
+        cidade = COALESCE($6, cidade),
+        estado = COALESCE($7, estado),
+        cep = COALESCE($8, cep),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $10
+      WHERE id = $9
       RETURNING 
         id, 
         codigo as "code", 
@@ -233,7 +232,7 @@ export const updateCustomer = async (req: Request, res: Response): Promise<void>
         cep as "zipCode",
         updated_at
     `
-    const values = [name, cpf, email, phone, status, address, city, state, zipCode, id]
+    const values = [name, email, phone, status, address, city, state, zipCode, id]
     const result = await query(sql, values)
 
     if (result.rows.length === 0) {
@@ -243,10 +242,10 @@ export const updateCustomer = async (req: Request, res: Response): Promise<void>
 
     res.status(200).json(result.rows[0])
   } catch (error: any) {
-    console.error('❌ Erro ao atualizar cliente:', error)
+    console.error('Erro ao atualizar cliente:', error)
 
     if (error.code === '23505') {
-      res.status(409).json({ error: 'CPF ou E-mail informado já pertence a outro cliente.' })
+      res.status(409).json({ error: 'E-mail informado já pertence a outro cliente.' })
       return
     }
 
@@ -290,21 +289,21 @@ export const updateCustomerStatus = async (req: Request, res: Response): Promise
 // ------------------------------------------------------------------------------
 // 7. EXCLUIR CLIENTE (DELETE /api/clientes/:id)
 // ------------------------------------------------------------------------------
-export const deleteCustomer = async (req: Request, res: Response): Promise<void> => {
-  try {
-    const { id } = req.params
+// export const deleteCustomer = async (req: Request, res: Response): Promise<void> => {
+//   try {
+//     const { id } = req.params
 
-    const sql = 'DELETE FROM clientes WHERE id = $1 RETURNING id, nome'
-    const result = await query(sql, [id])
+//     const sql = 'DELETE FROM clientes WHERE id = $1 RETURNING id, nome'
+//     const result = await query(sql, [id])
 
-    if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Cliente não encontrado para exclusão.' })
-      return
-    }
+//     if (result.rows.length === 0) {
+//       res.status(404).json({ error: 'Cliente não encontrado para exclusão.' })
+//       return
+//     }
 
-    res.status(200).json({ message: `Cliente '${result.rows[0].nome}' excluído com sucesso.` })
-  } catch (error: any) {
-    console.error('❌ Erro ao excluir cliente:', error)
-    res.status(500).json({ error: 'Erro ao excluir cliente do banco de dados.' })
-  }
-}
+//     res.status(200).json({ message: `Cliente '${result.rows[0].nome}' excluído com sucesso.` })
+//   } catch (error: any) {
+//     console.error('❌ Erro ao excluir cliente:', error)
+//     res.status(500).json({ error: 'Erro ao excluir cliente do banco de dados.' })
+//   }
+// }
