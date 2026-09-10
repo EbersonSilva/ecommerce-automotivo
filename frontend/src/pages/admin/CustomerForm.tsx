@@ -7,6 +7,7 @@ import { Select } from '../../components/ui/Select'
 import { Button } from '../../components/ui/Button'
 import { ArrowLeft, Save, UserPlus } from 'lucide-react'
 import { getCustomerById, createCustomer, updateCustomer } from '../../services/customerService'
+import { maskCPF, onlyNumbers } from '../../utils/inputMasks'
 
 /**
  * ==============================================================================
@@ -86,7 +87,7 @@ export const CustomerForm = () => {
 
     const customerPayload = {
       name,
-      cpf,
+      cpf: onlyNumbers(cpf), // Remove máscara antes de enviar
       email,
       phone,
       status,
@@ -178,7 +179,7 @@ export const CustomerForm = () => {
             <Input
               label="CPF *"
               value={cpf}
-              onChange={(e) => setCpf(e.target.value)}
+              onChange={(e) => setCpf(maskCPF(e.target.value))}
               placeholder="000.000.000-00"
               required
               disabled={isEdit}

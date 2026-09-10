@@ -6,6 +6,7 @@ import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { ArrowLeft, UserPlus, Search, ShieldCheck } from 'lucide-react'
 import { getCustomerByCpf, createCustomer } from '../../services/customerService'
+import { maskCPF } from '../../utils/inputMasks' // Importa a função de máscara de CPF
 
 /**
  * ==============================================================================
@@ -114,7 +115,7 @@ export const Register: React.FC = () => {
 
     const customerPayload = {
       name,
-      cpf,
+      cpf: cleanCpf(cpf),
       email,
       phone,
       status: 'Ativo' as const,
@@ -210,7 +211,7 @@ export const Register: React.FC = () => {
             <Input
               label="CPF de Identificação"
               value={searchCpf}
-              onChange={(e) => setSearchCpf(e.target.value)}
+              onChange={(e) => setSearchCpf(maskCPF(e.target.value))}
               placeholder="000.000.000-00"
               required
             />
@@ -242,7 +243,7 @@ export const Register: React.FC = () => {
               <Input
                 label="CPF *"
                 value={cpf}
-                onChange={(e) => setCpf(e.target.value)}
+                onChange={(e) => setCpf(maskCPF(e.target.value))}
                 placeholder="000.000.000-00"
                 required
               />
