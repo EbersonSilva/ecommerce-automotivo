@@ -39,9 +39,6 @@ export const Register: React.FC = () => {
   const [zipCode, setZipCode] = useState('')
   const [isRegistering, setIsRegistering] = useState(false)
 
-  // Remove caracteres não numéricos do CPF
-  const cleanCpf = (val: string) => val.replace(/\D/g, '')
-
   /**
    * FUNÇÃO 1: Identificar Cliente por CPF no PostgreSQL
    */
@@ -49,7 +46,7 @@ export const Register: React.FC = () => {
     e.preventDefault()
     setIdError('')
 
-    const queryCpf = cleanCpf(searchCpf)
+    const queryCpf = onlyNumbers(searchCpf)
     if (!queryCpf) {
       setIdError('Por favor, informe seu CPF.')
       return
@@ -78,7 +75,7 @@ export const Register: React.FC = () => {
       try {
         const saved = localStorage.getItem('custom-customers')
         const customersList: Customer[] = saved ? JSON.parse(saved) : mockCustomers
-        const found = customersList.find((c) => cleanCpf(c.cpf) === queryCpf)
+        const found = customersList.find((c) => onlyNumbers(c.cpf) === queryCpf)
 
         if (found) {
           if (found.status === 'Inativo') {
@@ -115,7 +112,7 @@ export const Register: React.FC = () => {
 
     const customerPayload = {
       name,
-      cpf: cleanCpf(cpf),
+      cpf: onlyNumbers(cpf),
       email,
       phone: onlyNumbers(phone),
       status: 'Ativo' as const,
@@ -143,8 +140,8 @@ export const Register: React.FC = () => {
         const saved = localStorage.getItem('custom-customers')
         const customersList: Customer[] = saved ? JSON.parse(saved) : [...mockCustomers]
 
-        const cleanInputCpf = cleanCpf(cpf)
-        const exists = customersList.some((c) => cleanCpf(c.cpf) === cleanInputCpf)
+        const cleanInputCpf = onlyNumbers(cpf)
+        const exists = customersList.some((c) => onlyNumbers(c.cpf) === cleanInputCpf)
         if (exists) {
           alert('Este CPF já está cadastrado. Tente se identificar no painel ao lado.')
           return

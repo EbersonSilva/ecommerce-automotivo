@@ -132,6 +132,8 @@ export const createCustomer = async (req: Request, res: Response): Promise<void>
   try {
     const { name, cpf, email, phone, status, address, city, state, zipCode } = req.body
     const cleanCpf = String(cpf || '').replace(/\D/g, '') // Remove pontuação do CPF
+    const cleanPhone = String(phone || '').replace(/\D/g, '') // Remove pontuação do telefone
+    const cleanZipCode = String(zipCode || '').replace(/\D/g, '') // Remove pontuação do CEP
 
     // Validação de campos obrigatórios
     if (!name || !cpf || !email || !phone) {
@@ -167,12 +169,12 @@ export const createCustomer = async (req: Request, res: Response): Promise<void>
       name,
       cleanCpf,
       email,
-      phone,
+      cleanPhone,
       status || 'Ativo',
       address || null,
       city || null,
       state || null,
-      zipCode || null
+      cleanZipCode || null
     ]
 
     const result = await query(sql, values)
@@ -206,6 +208,9 @@ export const updateCustomer = async (req: Request, res: Response): Promise<void>
     const { id } = req.params
     const { name, email, phone, status, address, city, state, zipCode } = req.body
 
+    const cleanPhone = phone ? String(phone).replace(/\D/g, '') : phone // Remove pontuação do telefone
+    const cleanZipCode = zipCode ? String(zipCode).replace(/\D/g, '') : zipCode // Remove pontuação do CEP
+
     const sql = `
       UPDATE clientes
       SET 
@@ -233,7 +238,7 @@ export const updateCustomer = async (req: Request, res: Response): Promise<void>
         cep as "zipCode",
         updated_at
     `
-    const values = [name, email, phone, status, address, city, state, zipCode, id]
+    const values = [name, email, cleanPhone, status, address, city, state, cleanZipCode, id]
     const result = await query(sql, values)
 
     if (result.rows.length === 0) {

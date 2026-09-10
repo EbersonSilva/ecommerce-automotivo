@@ -8,6 +8,7 @@ import { mockCoupons, mockExchanges, mockCustomers, type Coupon, type Exchange, 
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
 import { Table } from '../../components/ui/Table'
 import { updateCustomer } from '../../services/customerService'
+import { maskCEP, onlyNumbers } from '../../utils/inputMasks' // Importa a função maskCEP para aplicar máscara de CEP
 
 export const Account = () => {
   const [loggedCustomer, setLoggedCustomer] = useState<Customer | null>(null)
@@ -140,7 +141,7 @@ export const Account = () => {
 
       // Tenta persistir no PostgreSQL via API
       try {
-        await updateCustomer(current.id, { address, city, state, zipCode })
+        await updateCustomer(current.id, { address, city, state, zipCode: onlyNumbers(zipCode) }) // Remove máscara antes de enviar
       } catch (apiErr) {
         console.warn('⚠️ Não foi possível salvar no PostgreSQL, salvando localmente...', apiErr)
       }
@@ -354,7 +355,7 @@ export const Account = () => {
               <Input
                 label="CEP"
                 value={zipCode}
-                onChange={(e) => setZipCode(e.target.value)}
+                onChange={(e) => setZipCode(maskCEP(e.target.value))}
               />
               <div className="flex justify-end pt-2">
                 <Button type="submit" className="save-btn gap-2">
