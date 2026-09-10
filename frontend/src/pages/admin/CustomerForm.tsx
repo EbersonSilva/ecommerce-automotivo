@@ -7,7 +7,7 @@ import { Select } from '../../components/ui/Select'
 import { Button } from '../../components/ui/Button'
 import { ArrowLeft, Save, UserPlus } from 'lucide-react'
 import { getCustomerById, createCustomer, updateCustomer } from '../../services/customerService'
-import { maskCPF, onlyNumbers } from '../../utils/inputMasks'
+import { maskCPF, maskPhone, maskCEP, onlyNumbers } from '../../utils/inputMasks'
 
 /**
  * ==============================================================================
@@ -88,13 +88,13 @@ export const CustomerForm = () => {
     const customerPayload = {
       name,
       cpf: onlyNumbers(cpf), // Remove máscara antes de enviar
-      email,
-      phone,
+      email,  
+      phone: onlyNumbers(phone), // Remove máscara antes de enviar
       status,
       address,
       city,
       state,
-      zipCode
+      zipCode: onlyNumbers(zipCode) // Remove máscara antes de enviar
     }
 
     try {
@@ -187,7 +187,7 @@ export const CustomerForm = () => {
             <Input
               label="Telefone *"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => setPhone(maskPhone(e.target.value))}
               placeholder="(00) 00000-0000"
               required
             />
@@ -246,7 +246,7 @@ export const CustomerForm = () => {
             <Input
               label="CEP"
               value={zipCode}
-              onChange={(e) => setZipCode(e.target.value)}
+              onChange={(e) => setZipCode(maskCEP(e.target.value))}
               placeholder="00000-000"
             />
           </div>

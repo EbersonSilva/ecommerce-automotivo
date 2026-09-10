@@ -6,7 +6,7 @@ import { Input } from '../../components/ui/Input'
 import { Button } from '../../components/ui/Button'
 import { ArrowLeft, UserPlus, Search, ShieldCheck } from 'lucide-react'
 import { getCustomerByCpf, createCustomer } from '../../services/customerService'
-import { maskCPF } from '../../utils/inputMasks' // Importa a função de máscara de CPF
+import { maskCPF, maskPhone, maskCEP, onlyNumbers } from '../../utils/inputMasks' // Importa a função de máscara de CPF
 
 /**
  * ==============================================================================
@@ -117,12 +117,12 @@ export const Register: React.FC = () => {
       name,
       cpf: cleanCpf(cpf),
       email,
-      phone,
+      phone: onlyNumbers(phone),
       status: 'Ativo' as const,
       address,
       city,
       state,
-      zipCode
+      zipCode: onlyNumbers(zipCode)
     }
 
     try {
@@ -250,7 +250,7 @@ export const Register: React.FC = () => {
               <Input
                 label="Telefone *"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(maskPhone(e.target.value))}
                 placeholder="(00) 00000-0000"
                 required
               />
@@ -298,7 +298,7 @@ export const Register: React.FC = () => {
               <Input
                 label="CEP"
                 value={zipCode}
-                onChange={(e) => setZipCode(e.target.value)}
+                onChange={(e) => setZipCode(maskCEP(e.target.value))}
                 placeholder="00000-000"
               />
             </div>
