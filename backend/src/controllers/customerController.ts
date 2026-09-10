@@ -131,6 +131,7 @@ export const getCustomerByCpf = async (req: Request, res: Response): Promise<voi
 export const createCustomer = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, cpf, email, phone, status, address, city, state, zipCode } = req.body
+    const cleanCpf = String(cpf || '').replace(/\D/g, '') // Remove pontuação do CPF
 
     // Validação de campos obrigatórios
     if (!name || !cpf || !email || !phone) {
@@ -164,7 +165,7 @@ export const createCustomer = async (req: Request, res: Response): Promise<void>
     const values = [
       newCode,
       name,
-      cpf,
+      cleanCpf,
       email,
       phone,
       status || 'Ativo',
