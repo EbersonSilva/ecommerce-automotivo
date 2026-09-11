@@ -25,6 +25,7 @@ export const Checkout = () => {
   const [city, setCity] = useState('')
   const [state, setState] = useState('')
   const [zipCode, setZipCode] = useState('')
+  const [sameBillingAddress, setSameBillingAddress] = useState(true) // Se o endereço de cobrança é o mesmo que o de entrega
 
   // Step 2: Coupons State
   const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([])
@@ -480,6 +481,15 @@ export const Checkout = () => {
                 placeholder="00000-000"
                 disabled={addressOption === 'saved'}
               />
+              <label className="flex items-center gap-2 text-sm text-slate-40">
+                <input type="checkbox" checked={sameBillingAddress} onChange={(e) => setSameBillingAddress(e.target.checked)}
+                className="rounded border-slate-800 bg-slate-950 text-indigo-500"/>
+                <span  className="text-xs font-bold text-slate-400"> 
+O endereço de cobrança é igual ao de entrega
+                </span>
+                
+              </label>
+
               <div className="flex justify-end mt-4">
                 <Button onClick={handleNextStep} className="px-8">
                   Prosseguir para Pagamento
