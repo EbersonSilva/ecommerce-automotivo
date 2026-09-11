@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { query } from '../database/db.js'
+import { pool, query } from '../database/db.js'
 
 /**
  * ==============================================================================
@@ -35,7 +35,7 @@ export const getAllCustomers = async (req: Request, res: Response): Promise<void
       ORDER BY id ASC
     `
     const result = await query(sql)
-    
+
     // Retorna a lista de clientes (200 OK)
     res.status(200).json(result.rows)
   } catch (error: any) {
@@ -130,7 +130,7 @@ export const getCustomerByCpf = async (req: Request, res: Response): Promise<voi
 // ------------------------------------------------------------------------------
 export const createCustomer = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, cpf, email, phone, status, address, city, state, zipCode } = req.body
+    const { name, cpf, email, phone, status, address, city, state, zipCode, enderecoCobranca, enderecoEntrega } = req.body
     const cleanCpf = String(cpf || '').replace(/\D/g, '') // Remove pontuação do CPF
     const cleanPhone = String(phone || '').replace(/\D/g, '') // Remove pontuação do telefone
     const cleanZipCode = String(zipCode || '').replace(/\D/g, '') // Remove pontuação do CEP
@@ -138,6 +138,13 @@ export const createCustomer = async (req: Request, res: Response): Promise<void>
     // Validação de campos obrigatórios
     if (!name || !cpf || !email || !phone) {
       res.status(400).json({ error: 'Nome, CPF, E-mail e Telefone são campos obrigatórios.' })
+      return
+    }
+    // Validação de endereços obrigatórios
+    if (!enderecoCobranca || !enderecoEntrega) {
+      res.status(400).json({
+        error: 'É obrigatório informar um endereço de cobrança e um endereço de entrega.'
+      })
       return
     }
 
