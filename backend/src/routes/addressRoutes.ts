@@ -4,7 +4,7 @@ import {
   getAddressesByCustomer
 } from '../controllers/addressController.js'
 
-const router = Router()
+const router = Router({ mergeParams: true })// Permite acessar os parâmetros da rota pai (clienteId) 
 
 // GET /api/clientes/:clienteId/enderecos
 router.get('/', getAddressesByCustomer)

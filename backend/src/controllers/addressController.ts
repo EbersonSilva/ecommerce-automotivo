@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { query } from '../../dist/database/db.js'
+import { query } from '../database/db.js'
 
 // Cria um novo endereço para um cliente específico
 export const createAddress = async (req: Request, res: Response): Promise<void> => {
