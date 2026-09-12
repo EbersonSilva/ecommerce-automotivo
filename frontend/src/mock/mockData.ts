@@ -22,10 +22,26 @@ export interface Customer {
   email: string
   phone: string
   status: 'Ativo' | 'Inativo'
-  address: string
-  city: string
-  state: string
-  zipCode: string
+  address?: string
+  city?: string
+  state?: string
+  zipCode?: string
+}
+
+export interface Address {
+  id?: number
+  clienteId?: string
+  tipoEndereco: 'COBRANCA' | 'ENTREGA'
+  tipoResidencia: string
+  tipoLogradouro: string
+  logradouro: string
+  numero: string
+  bairro: string
+  cep: string
+  cidade: string
+  estado: string
+  pais: string
+  observacoes?: string | null
 }
 
 export interface OrderItem {

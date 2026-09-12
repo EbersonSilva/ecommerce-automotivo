@@ -1,5 +1,29 @@
 import type { Customer } from '../mock/mockData'
 
+export interface CustomerAddressPayload {
+  tipoEndereco: 'COBRANCA' | 'ENTREGA'
+  tipoResidencia: string
+  tipoLogradouro: string
+  logradouro: string
+  numero: string
+  bairro: string
+  cep: string
+  cidade: string
+  estado: string
+  pais: string
+  observacoes?: string
+}
+
+export interface CreateCustomerPayload {
+  name: string
+  cpf: string
+  email: string
+  phone: string
+  status: 'Ativo' | 'Inativo'
+  enderecoCobranca: CustomerAddressPayload
+  enderecoEntrega: CustomerAddressPayload
+}
+
 /**
  * URL base da API do backend.
  * Como o backend roda na porta 3001 por padrão, apontamos para lá.
@@ -60,7 +84,7 @@ export async function getCustomerByCpf(cpf: string): Promise<Customer> {
 }
 
 // 4. Cadastrar um novo cliente no PostgreSQL
-export async function createCustomer(customerData: Omit<Customer, 'id' | 'code'>): Promise<Customer> {
+export async function createCustomer(customerData: CreateCustomerPayload): Promise<Customer> {
   try {
     const response = await fetch(API_URL, {
       method: 'POST',

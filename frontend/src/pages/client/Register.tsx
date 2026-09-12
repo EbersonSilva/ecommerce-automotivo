@@ -19,7 +19,7 @@ import { maskCPF, maskPhone, maskCEP, onlyNumbers } from '../../utils/inputMasks
 export const Register: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  
+
   // Verifica se o usuário foi redirecionado a partir do checkout
   const fromCheckout = location.state?.from === '/checkout'
 
@@ -37,6 +37,11 @@ export const Register: React.FC = () => {
   const [city, setCity] = useState('')
   const [state, setState] = useState('')
   const [zipCode, setZipCode] = useState('')
+  const [tipoResidencia, setTipoResidencia] = useState('Casa')
+  const [tipoLogradouro, setTipoLogradouro] = useState('Rua')
+  const [numero, setNumero] = useState('')
+  const [bairro, setBairro] = useState('')
+  const [pais, setPais] = useState('Brasil')
   const [isRegistering, setIsRegistering] = useState(false)
 
   /**
@@ -65,12 +70,12 @@ export const Register: React.FC = () => {
       // Salva sessão local no navegador
       localStorage.setItem('logged-customer', JSON.stringify(found))
       window.dispatchEvent(new Event('auth-change'))
-      
+
       alert(`Bem-vindo de volta, ${found.name}!`)
       navigate(fromCheckout ? '/checkout' : '/minha-conta')
     } catch (err: any) {
       console.warn('⚠️ Tentando fallback local para busca de CPF...', err)
-      
+
       // Fallback local se a API estiver fora
       try {
         const saved = localStorage.getItem('custom-customers')
@@ -119,7 +124,33 @@ export const Register: React.FC = () => {
       address,
       city,
       state,
-      zipCode: onlyNumbers(zipCode)
+      zipCode: onlyNumbers(zipCode),
+      enderecoCobranca:{
+        tipoEndereco: 'COBRANCA' as const,
+        tipoResidencia,
+        tipoLogradouro,
+        logradouro: address,
+        numero,
+        bairro,
+        cep: onlyNumbers(zipCode),
+        cidade: city,
+        estado: state,
+        pais,
+        observacoes: ''
+      },
+      enderecoEntrega:{
+        tipoEndereco: 'ENTREGA' as const,
+        tipoResidencia,
+        tipoLogradouro,
+        logradouro: address,
+        numero,
+        bairro,
+        cep: onlyNumbers(zipCode),
+        cidade: city,
+        estado: state,
+        pais,
+        observacoes: ''
+      }
     }
 
     try {
@@ -134,7 +165,7 @@ export const Register: React.FC = () => {
       navigate(fromCheckout ? '/checkout' : '/minha-conta')
     } catch (err: any) {
       console.warn('⚠️ Tentando fallback local para cadastro...', err)
-      
+
       // Fallback local
       try {
         const saved = localStorage.getItem('custom-customers')
@@ -173,8 +204,8 @@ export const Register: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6 text-left max-w-5xl mx-auto w-full">
-      <Link 
-        to="/" 
+      <Link
+        to="/"
         className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-350 uppercase tracking-widest transition-colors mb-2"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
@@ -184,14 +215,14 @@ export const Register: React.FC = () => {
       <div>
         <h1 className="text-3xl font-black text-white tracking-tight">Cadastro / Identificação</h1>
         <p className="text-xs text-slate-500 font-medium">
-          {fromCheckout 
-            ? 'Identifique-se ou crie sua conta para finalizar a compra de seus itens automotivos.' 
+          {fromCheckout
+            ? 'Identifique-se ou crie sua conta para finalizar a compra de seus itens automotivos.'
             : 'Acesse seus dados de entrega, cupons de troca e histórico de compras.'}
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start mt-2">
-        
+
         {/* Painel 1: Identificação Rápida por CPF */}
         <div className="bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-6">
           <div>
@@ -269,6 +300,21 @@ export const Register: React.FC = () => {
               <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider pb-3 border-b border-slate-850">
                 Endereço de Entrega
               </h3>
+              <Input
+                label="Tipo de Residência"
+                value={tipoResidencia}
+                onChange={(e) => setTipoResidencia(e.target.value)}
+                placeholder="Ex: Casa"
+                required
+              />
+
+              <Input
+                label="Tipo de Logradouro"
+                value={tipoLogradouro}
+                onChange={(e) => setTipoLogradouro(e.target.value)}
+                placeholder="Ex: Rua"
+                required
+              />
 
               <Input
                 label="Endereço Completo"
@@ -276,6 +322,24 @@ export const Register: React.FC = () => {
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="Rua, número, complemento e bairro"
               />
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Número"
+                  value={numero}
+                  onChange={(e) => setNumero(e.target.value)}
+                  placeholder="Ex: 100"
+                  required
+                />
+
+                <Input
+                  label="Bairro"
+                  value={bairro}
+                  onChange={(e) => setBairro(e.target.value)}
+                  placeholder="Ex: Centro"
+                  required
+                />
+              </div>
+
 
               <div className="grid grid-cols-2 gap-4">
                 <Input
@@ -297,6 +361,13 @@ export const Register: React.FC = () => {
                 value={zipCode}
                 onChange={(e) => setZipCode(maskCEP(e.target.value))}
                 placeholder="00000-000"
+              />
+              <Input
+                label="País"
+                value={pais}
+                onChange={(e) => setPais(e.target.value)}
+                placeholder="Ex: Brasil"
+                required
               />
             </div>
 

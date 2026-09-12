@@ -25,10 +25,6 @@ export const getAllCustomers = async (req: Request, res: Response): Promise<void
         email, 
         telefone as "phone", 
         status, 
-        endereco as "address", 
-        cidade as "city", 
-        estado as "state", 
-        cep as "zipCode",
         created_at,
         updated_at
       FROM clientes 
@@ -60,10 +56,6 @@ export const getCustomerById = async (req: Request, res: Response): Promise<void
         email, 
         telefone as "phone", 
         status, 
-        endereco as "address", 
-        cidade as "city", 
-        estado as "state", 
-        cep as "zipCode",
         created_at,
         updated_at
       FROM clientes 
@@ -103,10 +95,6 @@ export const getCustomerByCpf = async (req: Request, res: Response): Promise<voi
         email, 
         telefone as "phone", 
         status, 
-        endereco as "address", 
-        cidade as "city", 
-        estado as "state", 
-        cep as "zipCode"
       FROM clientes 
       WHERE REPLACE(REPLACE(REPLACE(cpf, '.', ''), '-', ''), '/', '') = $1
          OR cpf = $2
@@ -148,46 +136,109 @@ export const createCustomer = async (req: Request, res: Response): Promise<void>
       return
     }
 
-    // 1. Gera o próximo código sequencial CLI-XXXX automaticamente
-    const countResult = await query('SELECT COUNT(*) FROM clientes')
-    const totalClients = parseInt(countResult.rows[0].count, 10)
-    const newCode = `CLI-${String(totalClients + 1).padStart(4, '0')}`
-
-    // 2. Insere o cliente na tabela usando SQL parametrizado ($1, $2, ...)
-    const sql = `
-      INSERT INTO clientes (
-        codigo, nome, cpf, email, telefone, status, endereco, cidade, estado, cep
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      RETURNING 
-        id, 
-        codigo as "code", 
-        nome as "name", 
-        cpf, 
-        email, 
-        telefone as "phone", 
-        status, 
-        endereco as "address", 
-        cidade as "city", 
-        estado as "state", 
-        cep as "zipCode"
-    `
-    const values = [
-      newCode,
-      name,
-      cleanCpf,
-      email,
-      cleanPhone,
-      status || 'Ativo',
-      address || null,
-      city || null,
-      state || null,
-      cleanZipCode || null
+    const camposObrigatorios = [
+      'tipoEndereco',
+      'tipoResidencia',
+      'tipoLogradouro',
+      'logradouro',
+      'numero',
+      'bairro',
+      'cep',
+      'cidade',
+      'estado',
+      'pais'
     ]
 
-    const result = await query(sql, values)
+    const enderecoIncompleto = (endereco: any) => 
+      camposObrigatorios.some((campo) => !endereco[campo])
 
-    // 201 Created: Retorna o cliente que acabou de ser inserido no PostgreSQL
-    res.status(201).json(result.rows[0])
+    if (enderecoIncompleto(enderecoCobranca) || enderecoIncompleto(enderecoEntrega)) {
+      res.status(400).json({
+        error: 'Todos os campos são obrigatórios dos endereços devem ser preenchidos.'
+      })
+      return
+    }
+
+    const dbClient = await pool.connect()
+
+try {
+  await dbClient.query('BEGIN')
+
+  const countResult = await dbClient.query('SELECT COUNT(*) FROM clientes')
+  const totalClients = parseInt(countResult.rows[0].count, 10)
+  const newCode = `CLI-${String(totalClients + 1).padStart(4, '0')}`
+
+  const customerSql = `
+    INSERT INTO clientes (
+      codigo, nome, cpf, email, telefone, status
+    ) VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING
+      id,
+      codigo as "code",
+      nome as "name",
+      cpf,
+      email,
+      telefone as "phone",
+      status
+  `
+
+  const customerValues = [
+    newCode,
+    name,
+    cleanCpf,
+    email,
+    cleanPhone,
+    status || 'Ativo'
+  ]
+
+  const customerResult = await dbClient.query(customerSql, customerValues)
+  const customer = customerResult.rows[0]
+
+  const addressSql = `
+    INSERT INTO enderecos (
+      cliente_id,
+      tipo_endereco,
+      tipo_residencia,
+      tipo_logradouro,
+      logradouro,
+      numero,
+      bairro,
+      cep,
+      cidade,
+      estado,
+      pais,
+      observacoes
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+  `
+
+  const saveAddress = (endereco: any) => [
+    customer.id,
+    endereco.tipoEndereco,
+    endereco.tipoResidencia,
+    endereco.tipoLogradouro,
+    endereco.logradouro,
+    endereco.numero,
+    endereco.bairro,
+    String(endereco.cep).replace(/\D/g, ''),
+    endereco.cidade,
+    endereco.estado,
+    endereco.pais,
+    endereco.observacoes || null
+  ]
+
+  await dbClient.query(addressSql, saveAddress(enderecoCobranca))
+  await dbClient.query(addressSql, saveAddress(enderecoEntrega))
+
+  await dbClient.query('COMMIT')
+
+  res.status(201).json(customer)
+} catch (error) {
+  await dbClient.query('ROLLBACK')
+  throw error
+} finally {
+  dbClient.release()
+}
+
   } catch (error: any) {
     console.error('❌ Erro ao cadastrar cliente:', error)
 
@@ -213,10 +264,9 @@ export const createCustomer = async (req: Request, res: Response): Promise<void>
 export const updateCustomer = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params
-    const { name, email, phone, status, address, city, state, zipCode } = req.body
+    const { name, email, phone, status } = req.body
 
     const cleanPhone = phone ? String(phone).replace(/\D/g, '') : phone // Remove pontuação do telefone
-    const cleanZipCode = zipCode ? String(zipCode).replace(/\D/g, '') : zipCode // Remove pontuação do CEP
 
     const sql = `
       UPDATE clientes
@@ -225,12 +275,8 @@ export const updateCustomer = async (req: Request, res: Response): Promise<void>
         email = COALESCE($2, email),
         telefone = COALESCE($3, telefone),
         status = COALESCE($4, status),
-        endereco = COALESCE($5, endereco),
-        cidade = COALESCE($6, cidade),
-        estado = COALESCE($7, estado),
-        cep = COALESCE($8, cep),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $9
+      WHERE id = $5
       RETURNING 
         id, 
         codigo as "code", 
@@ -239,13 +285,9 @@ export const updateCustomer = async (req: Request, res: Response): Promise<void>
         email, 
         telefone as "phone", 
         status, 
-        endereco as "address", 
-        cidade as "city", 
-        estado as "state", 
-        cep as "zipCode",
         updated_at
     `
-    const values = [name, email, cleanPhone, status, address, city, state, cleanZipCode, id]
+    const values = [name, email, cleanPhone, status, id]
     const result = await query(sql, values)
 
     if (result.rows.length === 0) {

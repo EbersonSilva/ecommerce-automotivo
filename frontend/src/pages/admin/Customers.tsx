@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { mockCustomers } from '../../mock/mockData'
 import type { Customer } from '../../mock/mockData'
 import { Table } from '../../components/ui/Table'
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
@@ -21,7 +20,6 @@ import { getCustomers, updateCustomerStatus } from '../../services/customerServi
 export const Customers = () => {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isUsingApi, setIsUsingApi] = useState(false)
 
   // Estados de Filtro e Paginação
   const [search, setSearch] = useState('')
@@ -35,7 +33,7 @@ export const Customers = () => {
 
   /**
    * FUNÇÃO: Carregar clientes da API (PostgreSQL)
-   * Se a API estiver offline, faz fallback para o localStorage/mockData
+  * Os dados desta tela sempre vêm do PostgreSQL.
    */
   const loadCustomers = async () => {
     setIsLoading(true)
@@ -43,12 +41,9 @@ export const Customers = () => {
       // 1. Tenta carregar do PostgreSQL via Backend
       const data = await getCustomers()
       setCustomers(data)
-      setIsUsingApi(true)
-    } catch (err) {
-      console.warn('⚠️ Backend offline ou inacessível. Usando armazenamento local temporário.', err)
-      setIsUsingApi(false)
-      const saved = localStorage.getItem('custom-customers')
-      setCustomers(saved ? JSON.parse(saved) : mockCustomers)
+    } catch (err: any) {
+      setCustomers([])
+      alert(`Não foi possível carregar os clientes: ${err.message}`)
     } finally {
       setIsLoading(false)
     }
@@ -94,22 +89,8 @@ export const Customers = () => {
     const nextStatus = targetCustomer.status === 'Ativo' ? 'Inativo' : 'Ativo'
 
     try {
-      if (isUsingApi) {
-        // Atualiza no PostgreSQL via PATCH
-        await updateCustomerStatus(targetCustomer.id, nextStatus)
-        // Recarrega lista atualizada do banco
-        await loadCustomers()
-      } else {
-        // Fallback local
-        const updated = customers.map((c) => {
-          if (c.id === targetCustomer.id) {
-            return { ...c, status: nextStatus as 'Ativo' | 'Inativo' }
-          }
-          return c
-        })
-        setCustomers(updated)
-        localStorage.setItem('custom-customers', JSON.stringify(updated))
-      }
+      await updateCustomerStatus(targetCustomer.id, nextStatus)
+      await loadCustomers()
     } catch (err: any) {
       alert(`Falha ao alterar status: ${err.message}`)
     } finally {
@@ -124,15 +105,9 @@ export const Customers = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-black text-white tracking-tight">Gestão de Clientes</h1>
-            {isUsingApi ? (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                ● PostgreSQL Conectado
-              </span>
-            ) : (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                ● Modo Local (Off-line)
-              </span>
-            )}
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              PostgreSQL
+            </span>
           </div>
           <p className="text-xs text-slate-500 font-medium">Cadastre, edite e ative/inative clientes da base de dados</p>
         </div>

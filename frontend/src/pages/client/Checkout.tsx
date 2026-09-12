@@ -34,8 +34,8 @@ export const Checkout = () => {
   const [billingCity, setBillingCity] = useState('')
   const [billingState, setBillingState] = useState('')
   const [billingZipCode, setBillingZipCode] = useState('')
-  const [billingAddressNumber, setBillingAddressNumber] = useState('')
   const [billingNeighborhood, setBillingNeighborhood] = useState('')
+  const [billingAddressNumber, setBillingAddressNumber] = useState('')
   // Step 2: Coupons State
   const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([])
   const [selectedCouponIds, setSelectedCouponIds] = useState<string[]>([])
@@ -536,7 +536,7 @@ export const Checkout = () => {
                     <Input
                       label="Bairro"
                       value={billingNeighborhood}
-                      onChange={(e) => setNeighborhood(e.target.value)}
+                      onChange={(e) => setBillingNeighborhood(e.target.value)}
                       placeholder="Ex: Jardim Paulista"
                       required
                     />

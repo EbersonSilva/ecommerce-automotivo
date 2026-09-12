@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { mockCustomers } from '../../mock/mockData'
-import type { Customer } from '../../mock/mockData'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Button } from '../../components/ui/Button'
 import { ArrowLeft, Save, UserPlus } from 'lucide-react'
 import { getCustomerById, createCustomer, updateCustomer } from '../../services/customerService'
+import { getCustomerAddresses } from '../../services/addressService'
 import { maskCPF, maskPhone, maskCEP, onlyNumbers } from '../../utils/inputMasks'
 
 /**
@@ -28,9 +27,14 @@ export const CustomerForm = () => {
   const [status, setStatus] = useState<'Ativo' | 'Inativo'>('Ativo')
   
   const [address, setAddress] = useState('')
+  const [tipoResidencia, setTipoResidencia] = useState('Casa')
+  const [tipoLogradouro, setTipoLogradouro] = useState('Rua')
+  const [numero, setNumero] = useState('')
+  const [bairro, setBairro] = useState('')
   const [city, setCity] = useState('')
   const [state, setState] = useState('')
   const [zipCode, setZipCode] = useState('')
+  const [pais, setPais] = useState('Brasil')
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -46,26 +50,21 @@ export const CustomerForm = () => {
           setEmail(found.email)
           setPhone(found.phone)
           setStatus(found.status)
-          setAddress(found.address || '')
-          setCity(found.city || '')
-          setState(found.state || '')
-          setZipCode(found.zipCode || '')
-        } catch (err) {
-          console.warn('⚠️ Não foi possível carregar via API, tentando fallback local...', err)
-          const saved = localStorage.getItem('custom-customers')
-          const list = saved ? JSON.parse(saved) : mockCustomers
-          const found = list.find((c: Customer) => c.id === id)
-          if (found) {
-            setName(found.name)
-            setCpf(found.cpf)
-            setEmail(found.email)
-            setPhone(found.phone)
-            setStatus(found.status)
-            setAddress(found.address || '')
-            setCity(found.city || '')
-            setState(found.state || '')
-            setZipCode(found.zipCode || '')
+          const addresses = await getCustomerAddresses(id)
+          const delivery = addresses.find((item) => item.tipoEndereco === 'ENTREGA') || addresses[0]
+          if (delivery) {
+            setAddress(delivery.logradouro)
+            setTipoResidencia(delivery.tipoResidencia)
+            setTipoLogradouro(delivery.tipoLogradouro)
+            setNumero(delivery.numero)
+            setBairro(delivery.bairro)
+            setCity(delivery.cidade)
+            setState(delivery.estado)
+            setZipCode(maskCEP(delivery.cep))
+            setPais(delivery.pais)
           }
+        } catch (err: any) {
+          alert(`Não foi possível carregar o cliente: ${err.message}`)
         }
       }
       loadCustomerData()
@@ -90,11 +89,20 @@ export const CustomerForm = () => {
       cpf: onlyNumbers(cpf), // Remove máscara antes de enviar
       email,  
       phone: onlyNumbers(phone), // Remove máscara antes de enviar
-      status,
-      address,
-      city,
-      state,
-      zipCode: onlyNumbers(zipCode) // Remove máscara antes de enviar
+      status
+    }
+
+    const addressPayload = {
+      tipoResidencia,
+      tipoLogradouro,
+      logradouro: address,
+      numero,
+      bairro,
+      cep: onlyNumbers(zipCode),
+      cidade: city,
+      estado: state,
+      pais,
+      observacoes: ''
     }
 
     try {
@@ -104,37 +112,17 @@ export const CustomerForm = () => {
         alert('Cadastro do cliente atualizado com sucesso no banco de dados!')
       } else {
         // Cria novo cliente no PostgreSQL (POST /api/clientes)
-        await createCustomer(customerPayload)
+        await createCustomer({
+          ...customerPayload,
+          enderecoCobranca: { tipoEndereco: 'COBRANCA' as const, ...addressPayload },
+          enderecoEntrega: { tipoEndereco: 'ENTREGA' as const, ...addressPayload }
+        })
         alert('Novo cliente cadastrado com sucesso no banco de dados!')
       }
 
       navigate('/admin/clientes')
     } catch (err: any) {
-      console.warn('⚠️ Tentando fallback local devido a erro na API:', err)
-      
-      // Fallback local se a API estiver indisponível
-      try {
-        const saved = localStorage.getItem('custom-customers')
-        const list: Customer[] = saved ? JSON.parse(saved) : [...mockCustomers]
-
-        if (isEdit) {
-          const updated = list.map((c) => (c.id === id ? { ...c, ...customerPayload } : c))
-          localStorage.setItem('custom-customers', JSON.stringify(updated))
-          alert('Cadastro atualizado localmente!')
-        } else {
-          const newCustomer: Customer = {
-            id: String(list.length + 1),
-            code: `CLI-${String(list.length + 1).padStart(4, '0')}`,
-            ...customerPayload
-          }
-          list.push(newCustomer)
-          localStorage.setItem('custom-customers', JSON.stringify(list))
-          alert('Novo cliente salvo localmente!')
-        }
-        navigate('/admin/clientes')
-      } catch (localErr) {
-        alert(`Erro ao gravar registro: ${err.message}`)
-      }
+      alert(`Erro ao gravar registro: ${err.message}`)
     } finally {
       setIsSubmitting(false)
     }
@@ -221,33 +209,79 @@ export const CustomerForm = () => {
               Endereço de Entrega
             </h3>
 
-            <Input
-              label="Endereço"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Rua, número, complemento e bairro"
-            />
-
             <div className="grid grid-cols-2 gap-4">
               <Input
-                label="Cidade"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="Cidade"
+                label="Tipo de Residência *"
+                value={tipoResidencia}
+                onChange={(e) => setTipoResidencia(e.target.value)}
+                placeholder="Casa"
+                required
               />
               <Input
-                label="Estado"
-                value={state}
-                onChange={(e) => setState(e.target.value)}
-                placeholder="Ex: SP"
+                label="Tipo de Logradouro *"
+                value={tipoLogradouro}
+                onChange={(e) => setTipoLogradouro(e.target.value)}
+                placeholder="Rua"
+                required
               />
             </div>
 
             <Input
-              label="CEP"
+              label="Logradouro *"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="Nome da rua ou avenida"
+              required
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Número *"
+                value={numero}
+                onChange={(e) => setNumero(e.target.value)}
+                placeholder="Número"
+                required
+              />
+              <Input
+                label="Bairro *"
+                value={bairro}
+                onChange={(e) => setBairro(e.target.value)}
+                placeholder="Bairro"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Cidade *"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Cidade"
+                required
+              />
+              <Input
+                label="Estado *"
+                value={state}
+                onChange={(e) => setState(e.target.value)}
+                placeholder="Ex: SP"
+                required
+              />
+            </div>
+
+            <Input
+              label="CEP *"
               value={zipCode}
               onChange={(e) => setZipCode(maskCEP(e.target.value))}
               placeholder="00000-000"
+              required
+            />
+
+            <Input
+              label="País *"
+              value={pais}
+              onChange={(e) => setPais(e.target.value)}
+              placeholder="Brasil"
+              required
             />
           </div>
 
