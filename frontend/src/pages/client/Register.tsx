@@ -3,10 +3,29 @@ import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { mockCustomers } from '../../mock/mockData'
 import type { Customer } from '../../mock/mockData'
 import { Input } from '../../components/ui/Input'
+import { Select } from '../../components/ui/Select'
 import { Button } from '../../components/ui/Button'
-import { ArrowLeft, UserPlus, Search, ShieldCheck } from 'lucide-react'
+import {
+  ArrowLeft, UserPlus, Search, ShieldCheck, User, MapPin, Sparkles, CheckCircle2, Truck, Ticket
+} from 'lucide-react'
 import { getCustomerByCpf, createCustomer } from '../../services/customerService'
 import { maskCPF, maskPhone, maskCEP, onlyNumbers } from '../../utils/inputMasks' // Importa a função de máscara de CPF
+
+const tipoResidenciaOptions = [
+  { value: 'CASA', label: 'Casa' },
+  { value: 'APARTAMENTO', label: 'Apartamento' },
+  { value: 'CONDOMINIO', label: 'Condomínio' },
+  { value: 'OUTRO', label: 'Outro' },
+]
+
+const tipoLogradouroOptions = [
+  { value: 'Rua', label: 'Rua' },
+  { value: 'Avenida', label: 'Avenida' },
+  { value: 'Alameda', label: 'Alameda' },
+  { value: 'Travessa', label: 'Travessa' },
+  { value: 'Largo', label: 'Largo' },
+  { value: 'Beco', label: 'Beco' },
+]
 
 /**
  * ==============================================================================
@@ -125,7 +144,7 @@ export const Register: React.FC = () => {
       city,
       state,
       zipCode: onlyNumbers(zipCode),
-      enderecoCobranca:{
+      enderecoCobranca: {
         tipoEndereco: 'COBRANCA' as const,
         tipoResidencia,
         tipoLogradouro,
@@ -138,7 +157,7 @@ export const Register: React.FC = () => {
         pais,
         observacoes: ''
       },
-      enderecoEntrega:{
+      enderecoEntrega: {
         tipoEndereco: 'ENTREGA' as const,
         tipoResidencia,
         tipoLogradouro,
@@ -202,132 +221,225 @@ export const Register: React.FC = () => {
     }
   }
 
-  return (
-    <div className="flex flex-col gap-6 text-left max-w-5xl mx-auto w-full">
+   return (
+    <div className="flex flex-col gap-6 text-left max-w-6xl mx-auto w-full px-4 py-4">
+      {/* Botão Voltar */}
       <Link
         to="/"
-        className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-350 uppercase tracking-widest transition-colors mb-2"
+        className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest transition-colors w-fit group"
       >
-        <ArrowLeft className="w-3.5 h-3.5" />
+        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
         Voltar para a Loja
       </Link>
 
-      <div>
-        <h1 className="text-3xl font-black text-white tracking-tight">Cadastro / Identificação</h1>
-        <p className="text-xs text-slate-500 font-medium">
-          {fromCheckout
-            ? 'Identifique-se ou crie sua conta para finalizar a compra de seus itens automotivos.'
-            : 'Acesse seus dados de entrega, cupons de troca e histórico de compras.'}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start mt-2">
-
-        {/* Painel 1: Identificação Rápida por CPF */}
-        <div className="bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-6">
-          <div>
-            <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider pb-3 border-b border-slate-850 flex items-center gap-2">
-              <Search className="w-4.5 h-4.5 text-indigo-400" />
-              Já sou cliente
-            </h3>
-            <p className="text-[11px] text-slate-500 mt-2 leading-relaxed">
-              Caso já tenha realizado compras conosco, digite seu CPF cadastrado no sistema.
-            </p>
+      {/* Cabeçalho da Página */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 pb-2 border-b border-slate-800">
+        <div>
+          <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold uppercase tracking-wider mb-1">
+            <Sparkles className="w-4 h-4" />
+            Central de Acesso
           </div>
-
-          <form onSubmit={handleIdentify} className="space-y-4">
-            <Input
-              label="CPF de Identificação"
-              value={searchCpf}
-              onChange={(e) => setSearchCpf(maskCPF(e.target.value))}
-              placeholder="000.000.000-00"
-              required
-            />
-            {idError && <p className="text-[10px] text-rose-400 font-semibold">{idError}</p>}
-            <Button type="submit" disabled={isSearching} className="w-full justify-center">
-              {isSearching ? 'Buscando...' : 'Buscar Cadastro'}
-            </Button>
-          </form>
+          <h1 className="text-3xl font-black text-white tracking-tight">Identificação & Cadastro</h1>
+          <p className="text-xs text-slate-400 font-medium mt-1">
+            {fromCheckout
+              ? 'Identifique-se ou crie sua conta para finalizar o pedido com segurança.'
+              : 'Acesse seus dados de entrega, cupons de troca e histórico de compras automotivas.'}
+          </p>
         </div>
 
-        {/* Painel 2: Formulário de Nova Conta */}
-        <form onSubmit={handleRegister} className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Dados Pessoais */}
-          <div className="bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-5">
-            <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider pb-3 border-b border-slate-850 flex items-center gap-2">
-              <UserPlus className="w-4.5 h-4.5 text-indigo-400" />
-              Nova Conta
-            </h3>
+        {fromCheckout && (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 w-fit">
+            Etapa de Checkout
+          </span>
+        )}
+      </div>
 
-            <Input
-              label="Nome Completo *"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Nome e Sobrenome"
-              required
-            />
+      {/* Grid Principal: 12 Colunas */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mt-2">
 
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="CPF *"
-                value={cpf}
-                onChange={(e) => setCpf(maskCPF(e.target.value))}
-                placeholder="000.000.000-00"
-                required
-              />
-              <Input
-                label="Telefone *"
-                value={phone}
-                onChange={(e) => setPhone(maskPhone(e.target.value))}
-                placeholder="(00) 00000-0000"
-                required
-              />
+        {/* ========================================================================= */}
+        {/* COLUNA ESQUERDA (5 Colunas): Já sou cliente + Benefícios                 */}
+        {/* ========================================================================= */}
+        <div className="lg:col-span-5 flex flex-col gap-6">
+          
+          {/* Card 1: Identificação por CPF */}
+          <div className="bg-slate-900/60 border border-slate-800 p-6 md:p-7 rounded-3xl backdrop-blur-md shadow-2xl flex flex-col gap-5 relative overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+            
+            <div>
+              <h3 className="text-base font-bold text-white tracking-wide flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                  <Search className="w-4 h-4" />
+                </div>
+                Já sou cliente
+              </h3>
+              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                Digite seu CPF para carregar suas informações e continuar suas compras rapidamente.
+              </p>
             </div>
 
-            <Input
-              label="E-mail *"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="nome@email.com"
-              required
-            />
+            <form onSubmit={handleIdentify} className="space-y-4">
+              <Input
+                label="CPF de Identificação"
+                value={searchCpf}
+                onChange={(e) => setSearchCpf(maskCPF(e.target.value))}
+                placeholder="000.000.000-00"
+                maxLength={14}
+                required
+              />
+              {idError && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400 font-medium">
+                  {idError}
+                </div>
+              )}
+              <Button type="submit" disabled={isSearching} className="w-full justify-center py-3">
+                {isSearching ? 'Buscando cadastro...' : 'Localizar Conta'}
+              </Button>
+            </form>
           </div>
 
-          {/* Dados de Entrega */}
-          <div className="bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-5 justify-between">
-            <div className="flex flex-col gap-5">
-              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider pb-3 border-b border-slate-850">
-                Endereço de Entrega
+          {/* Card 2: Benefícios da Loja */}
+          <div className="bg-slate-900/30 border border-slate-800/80 p-6 rounded-3xl flex flex-col gap-4">
+            <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              Vantagens de se cadastrar
+            </h4>
+            
+            <ul className="space-y-3">
+              <li className="flex items-start gap-3 text-xs text-slate-400">
+                <Truck className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                <span><strong className="text-slate-200">Entrega rápida:</strong> Endereços salvos para fechar compras em 1 clique.</span>
+              </li>
+              <li className="flex items-start gap-3 text-xs text-slate-400">
+                <Ticket className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                <span><strong className="text-slate-200">Cupons e Trocas:</strong> Acesse seus créditos e devoluções pelo painel.</span>
+              </li>
+              <li className="flex items-start gap-3 text-xs text-slate-400">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <span><strong className="text-slate-200">Segurança total:</strong> Seus dados protegidos no banco de dados.</span>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+
+        {/* ========================================================================= */}
+        {/* COLUNA DIREITA (7 Colunas): Formulário de Nova Conta                    */}
+        {/* ========================================================================= */}
+        <div className="lg:col-span-7">
+          <form 
+            onSubmit={handleRegister} 
+            className="bg-slate-900/60 border border-slate-800 p-6 md:p-8 rounded-3xl backdrop-blur-md shadow-2xl flex flex-col gap-7"
+          >
+            {/* Título da Seção */}
+            <div>
+              <h3 className="text-base font-bold text-white tracking-wide flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                  <UserPlus className="w-4 h-4" />
+                </div>
+                Criar Nova Conta
               </h3>
-              <Input
-                label="Tipo de Residência"
-                value={tipoResidencia}
-                onChange={(e) => setTipoResidencia(e.target.value)}
-                placeholder="Ex: Casa"
-                required
-              />
+              <p className="text-xs text-slate-400 mt-1">
+                Preencha os campos abaixo para criar seu cadastro completo.
+              </p>
+            </div>
 
-              <Input
-                label="Tipo de Logradouro"
-                value={tipoLogradouro}
-                onChange={(e) => setTipoLogradouro(e.target.value)}
-                placeholder="Ex: Rua"
-                required
-              />
+            {/* SEÇÃO 1: DADOS PESSOAIS */}
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-2 text-xs font-bold text-indigo-400 uppercase tracking-wider">
+                <User className="w-3.5 h-3.5" />
+                1. Dados Pessoais
+              </div>
 
-              <Input
-                label="Endereço Completo"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="Rua, número, complemento e bairro"
-              />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <Input
+                    label="Nome Completo *"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Ex: João da Silva"
+                    required
+                  />
+                </div>
+
+                <Input
+                  label="CPF *"
+                  value={cpf}
+                  onChange={(e) => setCpf(maskCPF(e.target.value))}
+                  placeholder="000.000.000-00"
+                  maxLength={14}
+                  required
+                />
+
+                <Input
+                  label="Telefone / WhatsApp *"
+                  value={phone}
+                  onChange={(e) => setPhone(maskPhone(e.target.value))}
+                  placeholder="(00) 00000-0000"
+                  maxLength={15}
+                  required
+                />
+
+                <div className="md:col-span-2">
+                  <Input
+                    label="E-mail de Acesso *"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="seu.email@exemplo.com"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* SEPARADOR SUTIL */}
+            <div className="border-t border-slate-800" />
+
+            {/* SEÇÃO 2: ENDEREÇO DE ENTREGA */}
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-2 text-xs font-bold text-indigo-400 uppercase tracking-wider">
+                <MapPin className="w-3.5 h-3.5" />
+                2. Endereço Principal (Entrega & Cobrança)
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Input
+                  label="CEP"
+                  value={zipCode}
+                  onChange={(e) => setZipCode(maskCEP(e.target.value))}
+                  placeholder="00000-000"
+                  maxLength={9}
+                />
+
+                <Select
+                  label="Tipo de Residência"
+                  value={tipoResidencia}
+                  onChange={(e) => setTipoResidencia(e.target.value)}
+                  options={tipoResidenciaOptions}
+                />
+
+                <Select
+                  label="Tipo Logradouro"
+                  value={tipoLogradouro}
+                  onChange={(e) => setTipoLogradouro(e.target.value)}
+                  options={tipoLogradouroOptions}
+                />
+
+                <div className="md:col-span-2">
+                  <Input
+                    label="Logradouro / Rua"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Ex: Av. Paulista, Rua das Flores"
+                  />
+                </div>
+
                 <Input
                   label="Número"
                   value={numero}
                   onChange={(e) => setNumero(e.target.value)}
-                  placeholder="Ex: 100"
+                  placeholder="Ex: 123"
                   required
                 />
 
@@ -338,53 +450,49 @@ export const Register: React.FC = () => {
                   placeholder="Ex: Centro"
                   required
                 />
-              </div>
 
-
-              <div className="grid grid-cols-2 gap-4">
                 <Input
                   label="Cidade"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  placeholder="Cidade"
+                  placeholder="Ex: São Paulo"
                 />
+
                 <Input
-                  label="Estado"
+                  label="Estado (UF)"
                   value={state}
-                  onChange={(e) => setState(e.target.value)}
+                  onChange={(e) => setState(e.target.value.toUpperCase())}
                   placeholder="Ex: SP"
+                  maxLength={2}
                 />
-              </div>
 
-              <Input
-                label="CEP"
-                value={zipCode}
-                onChange={(e) => setZipCode(maskCEP(e.target.value))}
-                placeholder="00000-000"
-              />
-              <Input
-                label="País"
-                value={pais}
-                onChange={(e) => setPais(e.target.value)}
-                placeholder="Ex: Brasil"
-                required
-              />
+                <div className="md:col-span-3">
+                  <Input
+                    label="País"
+                    value={pais}
+                    onChange={(e) => setPais(e.target.value)}
+                    placeholder="Brasil"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="flex flex-col gap-3 pt-4 border-t border-slate-850">
-              <Button type="submit" disabled={isRegistering} className="w-full justify-center py-3">
-                {isRegistering ? 'Cadastrando...' : 'Finalizar e Acessar'}
+            {/* BOTÃO DE SUBMIT */}
+            <div className="flex flex-col gap-3 pt-4 border-t border-slate-800">
+              <Button type="submit" disabled={isRegistering} className="w-full justify-center py-3.5 text-sm font-bold shadow-lg shadow-indigo-500/20">
+                {isRegistering ? 'Gravando Cadastro...' : 'Finalizar Cadastro e Continuar'}
               </Button>
-              <div className="flex items-center gap-1.5 justify-center text-[10px] text-slate-500">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                Dados seguros gravados no PostgreSQL.
+              <div className="flex items-center gap-2 justify-center text-xs text-slate-500">
+                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                Seus dados serão gravados com segurança no PostgreSQL.
               </div>
             </div>
-          </div>
-        </form>
+          </form>
+        </div>
 
       </div>
     </div>
   )
+
 }
 export default Register
