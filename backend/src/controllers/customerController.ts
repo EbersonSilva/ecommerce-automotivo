@@ -94,11 +94,12 @@ export const getCustomerByCpf = async (req: Request, res: Response): Promise<voi
         cpf, 
         email, 
         telefone as "phone", 
-        status, 
+        status
       FROM clientes 
       WHERE REPLACE(REPLACE(REPLACE(cpf, '.', ''), '-', ''), '/', '') = $1
          OR cpf = $2
     `
+
     const result = await query(sql, [cleanCpf, rawCpf])
 
     if (result.rows.length === 0) {
@@ -149,7 +150,7 @@ export const createCustomer = async (req: Request, res: Response): Promise<void>
       'pais'
     ]
 
-    const enderecoIncompleto = (endereco: any) => 
+    const enderecoIncompleto = (endereco: any) =>
       camposObrigatorios.some((campo) => !endereco[campo])
 
     if (enderecoIncompleto(enderecoCobranca) || enderecoIncompleto(enderecoEntrega)) {
@@ -161,14 +162,14 @@ export const createCustomer = async (req: Request, res: Response): Promise<void>
 
     const dbClient = await pool.connect()
 
-try {
-  await dbClient.query('BEGIN')
+    try {
+      await dbClient.query('BEGIN')
 
-  const countResult = await dbClient.query('SELECT COUNT(*) FROM clientes')
-  const totalClients = parseInt(countResult.rows[0].count, 10)
-  const newCode = `CLI-${String(totalClients + 1).padStart(4, '0')}`
+      const countResult = await dbClient.query('SELECT COUNT(*) FROM clientes')
+      const totalClients = parseInt(countResult.rows[0].count, 10)
+      const newCode = `CLI-${String(totalClients + 1).padStart(4, '0')}`
 
-  const customerSql = `
+      const customerSql = `
     INSERT INTO clientes (
       codigo, nome, cpf, email, telefone, status
     ) VALUES ($1, $2, $3, $4, $5, $6)
@@ -182,19 +183,19 @@ try {
       status
   `
 
-  const customerValues = [
-    newCode,
-    name,
-    cleanCpf,
-    email,
-    cleanPhone,
-    status || 'Ativo'
-  ]
+      const customerValues = [
+        newCode,
+        name,
+        cleanCpf,
+        email,
+        cleanPhone,
+        status || 'Ativo'
+      ]
 
-  const customerResult = await dbClient.query(customerSql, customerValues)
-  const customer = customerResult.rows[0]
+      const customerResult = await dbClient.query(customerSql, customerValues)
+      const customer = customerResult.rows[0]
 
-  const addressSql = `
+      const addressSql = `
     INSERT INTO enderecos (
       cliente_id,
       tipo_endereco,
@@ -211,33 +212,33 @@ try {
     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
   `
 
-  const saveAddress = (endereco: any) => [
-    customer.id,
-    endereco.tipoEndereco,
-    endereco.tipoResidencia,
-    endereco.tipoLogradouro,
-    endereco.logradouro,
-    endereco.numero,
-    endereco.bairro,
-    String(endereco.cep).replace(/\D/g, ''),
-    endereco.cidade,
-    endereco.estado,
-    endereco.pais,
-    endereco.observacoes || null
-  ]
+      const saveAddress = (endereco: any) => [
+        customer.id,
+        endereco.tipoEndereco,
+        endereco.tipoResidencia,
+        endereco.tipoLogradouro,
+        endereco.logradouro,
+        endereco.numero,
+        endereco.bairro,
+        String(endereco.cep).replace(/\D/g, ''),
+        endereco.cidade,
+        endereco.estado,
+        endereco.pais,
+        endereco.observacoes || null
+      ]
 
-  await dbClient.query(addressSql, saveAddress(enderecoCobranca))
-  await dbClient.query(addressSql, saveAddress(enderecoEntrega))
+      await dbClient.query(addressSql, saveAddress(enderecoCobranca))
+      await dbClient.query(addressSql, saveAddress(enderecoEntrega))
 
-  await dbClient.query('COMMIT')
+      await dbClient.query('COMMIT')
 
-  res.status(201).json(customer)
-} catch (error) {
-  await dbClient.query('ROLLBACK')
-  throw error
-} finally {
-  dbClient.release()
-}
+      res.status(201).json(customer)
+    } catch (error) {
+      await dbClient.query('ROLLBACK')
+      throw error
+    } finally {
+      dbClient.release()
+    }
 
   } catch (error: any) {
     console.error('❌ Erro ao cadastrar cliente:', error)
