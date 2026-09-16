@@ -2,13 +2,37 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Breadcrumb } from '../../components/ui/Breadcrumb'
 import { Input } from '../../components/ui/Input'
+import { Select } from '../../components/ui/Select'
 import { Button } from '../../components/ui/Button'
-import { User, MapPin, Save, Ticket, RefreshCcw, Truck } from 'lucide-react'
-import { mockCoupons, mockExchanges, mockCustomers, type Coupon, type Exchange, type Customer } from '../../mock/mockData'
+import { User, MapPin, Save, Ticket, RefreshCcw, Truck, Plus, CheckCircle2 } from 'lucide-react'
+import { mockCoupons, mockExchanges, mockCustomers, type Coupon, type Exchange, type Customer, type Address } from '../../mock/mockData'
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
 import { Table } from '../../components/ui/Table'
 import { updateCustomer } from '../../services/customerService'
-import { maskCEP, onlyNumbers } from '../../utils/inputMasks' // Importa a função maskCEP para aplicar máscara de CEP
+import { getCustomerAddresses, createCustomerAddress } from '../../services/addressService'
+import { maskPhone,maskCEP, onlyNumbers } from '../../utils/inputMasks' // Importa a função maskCEP para aplicar máscara de CEP
+
+
+const tipoResidenciaOptions = [
+  { value: 'CASA', label: 'Casa' },
+  { value: 'APARTAMENTO', label: 'Apartamento' },
+  { value: 'CONDOMINIO', label: 'Condomínio' },
+  { value: 'OUTRO', label: 'Outro' },
+]
+
+const tipoLogradouroOptions = [
+  { value: 'Rua', label: 'Rua' },
+  { value: 'Avenida', label: 'Avenida' },
+  { value: 'Alameda', label: 'Alameda' },
+  { value: 'Travessa', label: 'Travessa' },
+  { value: 'Largo', label: 'Largo' },
+  { value: 'Beco', label: 'Beco' },
+]
+
+const tipoEnderecoOptions = [
+  { value: 'ENTREGA', label: 'Entrega' },
+  { value: 'COBRANCA', label: 'Cobrança' },
+]
 
 export const Account = () => {
   const [loggedCustomer, setLoggedCustomer] = useState<Customer | null>(null)
@@ -19,11 +43,21 @@ export const Account = () => {
   const [phone, setPhone] = useState('')
   const [cpf, setCpf] = useState('')
 
-  const [address, setAddress] = useState('')
-  const [city, setCity] = useState('')
-  const [state, setState] = useState('')
-  const [zipCode, setZipCode] = useState('')
-
+  // Formulário de Novo Endereço
+  const [addresses, setAddresses] = useState<Address[]>([])
+  const [loadingAddresses, setLoadingAddresses] = useState(false)
+  const [showNewAddressModal, setShowNewAddressModal] = useState(false)
+  const [tipoEndereco, setTipoEndereco] = useState<'ENTREGA' | 'COBRANCA'>('ENTREGA')
+  const [tipoResidencia, setTipoResidencia] = useState('Casa')
+  const [tipoLogradouro, setTipoLogradouro] = useState('Rua')
+  const [newAddress, setNewAddress] = useState('')
+  const [newNumero, setNewNumero] = useState('')
+  const [newBairro, setNewBairro] = useState('')
+  const [newCity, setNewCity] = useState('')
+  const [newState, setNewState] = useState('')
+  const [newZipCode, setNewZipCode] = useState('')
+  const [newPais, setNewPais] = useState('Brasil')
+  const [isSavingAddress, setIsSavingAddress] = useState(false)
   const [coupons, setCoupons] = useState<Coupon[]>([])
   const [exchanges, setExchanges] = useState<Exchange[]>([])
 
@@ -32,7 +66,7 @@ export const Account = () => {
       const savedCoupons = localStorage.getItem('custom-coupons')
       const customCoupons = savedCoupons ? JSON.parse(savedCoupons) : []
       const allCoupons = [...customCoupons, ...mockCoupons]
-      const filteredCoupons = currentCust 
+      const filteredCoupons = currentCust
         ? allCoupons.filter((c: Coupon) => c.customerId === currentCust.id)
         : allCoupons
       setCoupons(filteredCoupons)
@@ -43,7 +77,7 @@ export const Account = () => {
         ...ex,
         status: ex.status === 'Pendente' ? 'TROCA SOLICITADA' : ex.status
       }))
-      
+
       const customExchangeIds = customExchanges.map((ex: Exchange) => ex.id)
       const filteredMocks = mockExchanges.filter((ex) => !customExchangeIds.includes(ex.id))
       const allExchanges = [...customExchanges, ...filteredMocks]
@@ -57,6 +91,20 @@ export const Account = () => {
     }
   }
 
+
+
+  const loadAddresses = async (customerId: string) => {
+    setLoadingAddresses(true)
+    try {
+      const data = await getCustomerAddresses(customerId)
+      setAddresses(data)
+    } catch (err) {
+      console.warn('⚠️ Não foi possível carregar endereços do PostgreSQL:', err)
+    } finally {
+      setLoadingAddresses(false)
+    }
+  }
+
   useEffect(() => {
     const saved = localStorage.getItem('logged-customer')
     let parsed: Customer | null = null
@@ -67,13 +115,13 @@ export const Account = () => {
       setEmail(parsed?.email || '')
       setPhone(parsed?.phone || '')
       setCpf(parsed?.cpf || '')
-      setAddress(parsed?.address || '')
-      setCity(parsed?.city || '')
-      setState(parsed?.state || '')
-      setZipCode(parsed?.zipCode || '')
+      if (parsed?.id) {
+        loadAddresses(parsed.id)
+      }
     }
     loadData(parsed)
   }, [])
+
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -116,7 +164,7 @@ export const Account = () => {
 
       // Dispara evento para atualizar header
       window.dispatchEvent(new Event('auth-change'))
-      
+
       alert('Perfil atualizado com sucesso!')
     } catch (err) {
       console.error(err)
@@ -124,52 +172,55 @@ export const Account = () => {
     }
   }
 
-  const handleSaveAddress = async (e: React.FormEvent) => {
+  const handleAddNewAddress = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!loggedCustomer?.id) return
+
+    if (!newAddress || !newNumero || !newBairro || !newCity || !newState || !newZipCode) {
+      alert('Favor preencher todos os campos do endereço.')
+      return
+    }
+
+    setIsSavingAddress(true)
     try {
-      const savedLogged = localStorage.getItem('logged-customer')
-      if (!savedLogged) return
-
-      const current = JSON.parse(savedLogged)
-      const updatedCustomer: Customer = {
-        ...current,
-        address,
-        city,
-        state,
-        zipCode
+      const addressPayload: Address = {
+        tipoEndereco,
+        tipoResidencia,
+        tipoLogradouro,
+        logradouro: newAddress,
+        numero: newNumero,
+        bairro: newBairro,
+        cep: onlyNumbers(newZipCode),
+        cidade: newCity,
+        estado: newState,
+        pais: newPais,
+        observacoes: ''
       }
 
-      // Tenta persistir no PostgreSQL via API
-      try {
-        await updateCustomer(current.id, { address, city, state, zipCode: onlyNumbers(zipCode) }) // Remove máscara antes de enviar
-      } catch (apiErr) {
-        console.warn('⚠️ Não foi possível salvar no PostgreSQL, salvando localmente...', apiErr)
-      }
+      await createCustomerAddress(loggedCustomer.id, addressPayload)
+      alert('Endereço adicionado com sucesso!')
 
-      localStorage.setItem('logged-customer', JSON.stringify(updatedCustomer))
-
-      // Atualiza banco de dados local global
-      const saved = localStorage.getItem('custom-customers')
-      const customersList: Customer[] = saved ? JSON.parse(saved) : [...mockCustomers]
-      const index = customersList.findIndex((c) => c.id === current.id)
-      if (index !== -1) {
-        customersList[index] = updatedCustomer
-      } else {
-        customersList.push(updatedCustomer)
-      }
-      localStorage.setItem('custom-customers', JSON.stringify(customersList))
-
-      alert('Endereço de entrega atualizado com sucesso!')
-    } catch (err) {
-      console.error(err)
-      alert('Erro ao atualizar endereço.')
+      // Limpar formulário e recarregar lista
+      setNewAddress('')
+      setNewNumero('')
+      setNewBairro('')
+      setNewCity('')
+      setNewState('')
+      setNewZipCode('')
+      setShowNewAddressModal(false)
+      loadAddresses(loggedCustomer.id)
+    } catch (err: any) {
+      alert(`Erro ao adicionar endereço: ${err.message}`)
+    } finally {
+      setIsSavingAddress(false)
     }
   }
+
 
   const handleDispatchItem = (exchangeId: string) => {
     const trackingCode = prompt('Digite o código de rastreamento do envio da devolução:')
     if (trackingCode === null) return // canceled
-    
+
     if (!trackingCode.trim()) {
       alert('Favor informar o código de rastreio para despacho.')
       return
@@ -178,9 +229,9 @@ export const Account = () => {
     try {
       const savedExchanges = localStorage.getItem('custom-exchanges')
       const customList: Exchange[] = savedExchanges ? JSON.parse(savedExchanges) : []
-      
+
       const foundInCustom = customList.find((ex) => ex.id === exchangeId)
-      
+
       let updatedExchanges: Exchange[]
       if (foundInCustom) {
         const updatedCustom = customList.map((ex) => {
@@ -255,41 +306,38 @@ export const Account = () => {
       <div className="flex border-b border-slate-800 gap-6 mb-2">
         <button
           onClick={() => setActiveTab('profile')}
-          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 ${
-            activeTab === 'profile'
+          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 ${activeTab === 'profile'
               ? 'border-indigo-500 text-white font-black'
               : 'border-transparent text-slate-550 hover:text-slate-200'
-          }`}
+            }`}
         >
           Meus Dados
         </button>
         <button
           onClick={() => setActiveTab('coupons')}
-          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 ${
-            activeTab === 'coupons'
+          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 ${activeTab === 'coupons'
               ? 'border-indigo-500 text-white font-black'
               : 'border-transparent text-slate-550 hover:text-slate-200'
-          }`}
+            }`}
         >
           Meus Cupons
         </button>
         <button
           onClick={() => setActiveTab('exchanges')}
-          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 ${
-            activeTab === 'exchanges'
+          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 ${activeTab === 'exchanges'
               ? 'border-indigo-500 text-white font-black'
               : 'border-transparent text-slate-550 hover:text-slate-200'
-          }`}
+            }`}
         >
           Minhas Devoluções / Trocas
         </button>
       </div>
 
-      {/* TAB 1: Profile Details */}
+      {/* TAB 1: Profile Details & Endereços */}
       {activeTab === 'profile' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-2 animate-fadeIn">
-          {/* Profile Card Form */}
-          <div className="bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-2 animate-fadeIn">
+          {/* Coluna Esquerda (5 cols): Dados Pessoais */}
+          <div className="lg:col-span-5 bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-6">
             <h3 className="text-base font-bold text-slate-200 uppercase tracking-wider pb-3 border-b border-slate-850 flex items-center gap-2">
               <User className="w-4.5 h-4.5 text-indigo-400" />
               Dados Pessoais
@@ -299,28 +347,31 @@ export const Account = () => {
                 label="Nome Completo"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                required
               />
               <Input
                 label="E-mail"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
               />
               <div className="grid grid-cols-2 gap-4">
                 <Input
                   label="CPF"
                   value={cpf}
-                  onChange={(e) => setCpf(e.target.value)}
                   disabled
                 />
                 <Input
                   label="Telefone"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => setPhone(maskPhone(e.target.value))}
+                  maxLength={15}
+                  required
                 />
               </div>
               <div className="flex justify-end pt-2">
-                <Button type="submit" className="save-btn gap-2">
+                <Button type="submit" className="gap-2">
                   <Save className="w-4 h-4" />
                   Salvar Perfil
                 </Button>
@@ -328,45 +379,188 @@ export const Account = () => {
             </form>
           </div>
 
-          {/* Address Card Form */}
-          <div className="bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-6">
-            <h3 className="text-base font-bold text-slate-200 uppercase tracking-wider pb-3 border-b border-slate-850 flex items-center gap-2">
-              <MapPin className="w-4.5 h-4.5 text-indigo-400" />
-              Endereço de Entrega Padrão
-            </h3>
-            <form onSubmit={handleSaveAddress} className="space-y-4">
-              <Input
-                label="Endereço"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-              />
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  label="Cidade"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                />
-                <Input
-                  label="Estado"
-                  value={state}
-                  onChange={(e) => setState(e.target.value)}
-                />
+          {/* Coluna Direita (7 cols): Lista de Endereços */}
+          <div className="lg:col-span-7 bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-6">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-850">
+              <h3 className="text-base font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                <MapPin className="w-4.5 h-4.5 text-indigo-400" />
+                Meus Endereços
+              </h3>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setShowNewAddressModal(!showNewAddressModal)}
+                className="gap-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                {showNewAddressModal ? 'Fechar Formulário' : 'Novo Endereço'}
+              </Button>
+            </div>
+
+            {/* Formulário de Novo Endereço (Colapsável) */}
+            {showNewAddressModal && (
+              <form onSubmit={handleAddNewAddress} className="p-5 rounded-2xl bg-slate-950/60 border border-indigo-500/30 flex flex-col gap-4 animate-in fade-in duration-200">
+                <div className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Plus className="w-3.5 h-3.5" />
+                  Cadastrar Novo Endereço
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <Select
+                    label="Finalidade"
+                    value={tipoEndereco}
+                    onChange={(e) => setTipoEndereco(e.target.value as 'ENTREGA' | 'COBRANCA')}
+                    options={tipoEnderecoOptions}
+                  />
+
+                  <Input
+                    label="CEP"
+                    value={newZipCode}
+                    onChange={(e) => setNewZipCode(maskCEP(e.target.value))}
+                    placeholder="00000-000"
+                    maxLength={9}
+                    required
+                  />
+
+                  <Select
+                    label="Tipo de Residência"
+                    value={tipoResidencia}
+                    onChange={(e) => setTipoResidencia(e.target.value)}
+                    options={tipoResidenciaOptions}
+                  />
+
+                  <Select
+                    label="Tipo Logradouro"
+                    value={tipoLogradouro}
+                    onChange={(e) => setTipoLogradouro(e.target.value)}
+                    options={tipoLogradouroOptions}
+                  />
+
+                  <div className="md:col-span-2">
+                    <Input
+                      label="Logradouro / Rua"
+                      value={newAddress}
+                      onChange={(e) => setNewAddress(e.target.value)}
+                      placeholder="Ex: Av. Paulista, Rua das Flores"
+                      required
+                    />
+                  </div>
+
+                  <Input
+                    label="Número"
+                    value={newNumero}
+                    onChange={(e) => setNewNumero(e.target.value)}
+                    placeholder="Ex: 123"
+                    required
+                  />
+
+                  <Input
+                    label="Bairro"
+                    value={newBairro}
+                    onChange={(e) => setNewBairro(e.target.value)}
+                    placeholder="Ex: Centro"
+                    required
+                  />
+
+                  <Input
+                    label="Cidade"
+                    value={newCity}
+                    onChange={(e) => setNewCity(e.target.value)}
+                    placeholder="Ex: São Paulo"
+                    required
+                  />
+
+                  <Input
+                    label="Estado (UF)"
+                    value={newState}
+                    onChange={(e) => setNewState(e.target.value.toUpperCase())}
+                    placeholder="Ex: SP"
+                    maxLength={2}
+                    required
+                  />
+
+                  <div className="md:col-span-2">
+                    <Input
+                      label="País"
+                      value={newPais}
+                      onChange={(e) => setNewPais(e.target.value)}
+                      placeholder="Brasil"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowNewAddressModal(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={isSavingAddress}
+                    className="gap-1.5"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    {isSavingAddress ? 'Salvando...' : 'Gravar Endereço'}
+                  </Button>
+                </div>
+              </form>
+            )}
+
+            {/* Listagem de Endereços */}
+            {loadingAddresses ? (
+              <div className="py-8 text-center text-xs text-slate-500">Carregando endereços...</div>
+            ) : addresses.length > 0 ? (
+              <div className="grid grid-cols-1 gap-3">
+                {addresses.map((addr) => (
+                  <div
+                    key={addr.id}
+                    className="p-4 rounded-2xl bg-slate-950/40 border border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-3"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${addr.tipoEndereco === 'ENTREGA'
+                              ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                              : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                            }`}
+                        >
+                          {addr.tipoEndereco}
+                        </span>
+                        <span className="text-xs font-bold text-slate-200">
+                          {addr.tipoLogradouro} {addr.logradouro}, {addr.numero}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        {addr.bairro} - {addr.cidade}/{addr.estado} • CEP: {maskCEP(addr.cep)}
+                      </p>
+                      <span className="text-[11px] text-slate-500">
+                        {addr.tipoResidencia} • {addr.pais}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-xs text-emerald-400 shrink-0">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Ativo
+                    </div>
+                  </div>
+                ))}
               </div>
-              <Input
-                label="CEP"
-                value={zipCode}
-                onChange={(e) => setZipCode(maskCEP(e.target.value))}
-              />
-              <div className="flex justify-end pt-2">
-                <Button type="submit" className="save-btn gap-2">
-                  <Save className="w-4 h-4" />
-                  Salvar Endereço
-                </Button>
+            ) : (
+              <div className="text-center py-8 bg-slate-950/20 border border-slate-850 rounded-2xl">
+                <MapPin className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                <p className="text-xs text-slate-500 font-medium">Nenhum endereço cadastrado no PostgreSQL.</p>
               </div>
-            </form>
+            )}
           </div>
         </div>
       )}
+
 
       {/* TAB 2: Coupons List */}
       {activeTab === 'coupons' && (
