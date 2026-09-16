@@ -61,6 +61,20 @@ export const Register: React.FC = () => {
   const [numero, setNumero] = useState('')
   const [bairro, setBairro] = useState('')
   const [pais, setPais] = useState('Brasil')
+
+    // Checkbox e Endereço de Cobrança (NOVO)
+  const [sameBillingAddress, setSameBillingAddress] = useState(true)
+  const [billingAddress, setBillingAddress] = useState('')
+  const [billingCity, setBillingCity] = useState('')
+  const [billingState, setBillingState] = useState('')
+  const [billingZipCode, setBillingZipCode] = useState('')
+  const [billingTipoResidencia, setBillingTipoResidencia] = useState('Casa')
+  const [billingTipoLogradouro, setBillingTipoLogradouro] = useState('Rua')
+  const [billingNumero, setBillingNumero] = useState('')
+  const [billingBairro, setBillingBairro] = useState('')
+  const [billingPais, setBillingPais] = useState('Brasil')
+
+
   const [isRegistering, setIsRegistering] = useState(false)
 
   /**
@@ -127,12 +141,61 @@ export const Register: React.FC = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!name || !cpf || !email || !phone) {
+        if (!name || !cpf || !email || !phone) {
       alert('Favor preencher todos os campos obrigatórios (nome, cpf, e-mail, telefone).')
       return
     }
 
+    if (!sameBillingAddress) {
+      if (!billingAddress || !billingNumero || !billingBairro || !billingCity || !billingState || !billingZipCode) {
+        alert('Favor preencher todos os campos do endereço de cobrança.')
+        return
+      }
+    }
+
     setIsRegistering(true)
+
+    const enderecoEntregaPayload = {
+      tipoEndereco: 'ENTREGA' as const,
+      tipoResidencia,
+      tipoLogradouro,
+      logradouro: address,
+      numero,
+      bairro,
+      cep: onlyNumbers(zipCode),
+      cidade: city,
+      estado: state,
+      pais,
+      observacoes: ''
+    }
+
+    const enderecoCobrancaPayload = sameBillingAddress
+      ? {
+          tipoEndereco: 'COBRANCA' as const,
+          tipoResidencia,
+          tipoLogradouro,
+          logradouro: address,
+          numero,
+          bairro,
+          cep: onlyNumbers(zipCode),
+          cidade: city,
+          estado: state,
+          pais,
+          observacoes: ''
+        }
+      : {
+          tipoEndereco: 'COBRANCA' as const,
+          tipoResidencia: billingTipoResidencia,
+          tipoLogradouro: billingTipoLogradouro,
+          logradouro: billingAddress,
+          numero: billingNumero,
+          bairro: billingBairro,
+          cep: onlyNumbers(billingZipCode),
+          cidade: billingCity,
+          estado: billingState,
+          pais: billingPais,
+          observacoes: ''
+        }
 
     const customerPayload = {
       name,
@@ -144,33 +207,10 @@ export const Register: React.FC = () => {
       city,
       state,
       zipCode: onlyNumbers(zipCode),
-      enderecoCobranca: {
-        tipoEndereco: 'COBRANCA' as const,
-        tipoResidencia,
-        tipoLogradouro,
-        logradouro: address,
-        numero,
-        bairro,
-        cep: onlyNumbers(zipCode),
-        cidade: city,
-        estado: state,
-        pais,
-        observacoes: ''
-      },
-      enderecoEntrega: {
-        tipoEndereco: 'ENTREGA' as const,
-        tipoResidencia,
-        tipoLogradouro,
-        logradouro: address,
-        numero,
-        bairro,
-        cep: onlyNumbers(zipCode),
-        cidade: city,
-        estado: state,
-        pais,
-        observacoes: ''
-      }
+      enderecoCobranca: enderecoCobrancaPayload,
+      enderecoEntrega: enderecoEntregaPayload
     }
+
 
     try {
       // 1. Salva no PostgreSQL via POST /api/clientes
@@ -396,11 +436,11 @@ export const Register: React.FC = () => {
             {/* SEPARADOR SUTIL */}
             <div className="border-t border-slate-800" />
 
-            {/* SEÇÃO 2: ENDEREÇO DE ENTREGA */}
+                        {/* SEÇÃO 2: ENDEREÇO DE ENTREGA */}
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-2 text-xs font-bold text-indigo-400 uppercase tracking-wider">
                 <MapPin className="w-3.5 h-3.5" />
-                2. Endereço Principal (Entrega & Cobrança)
+                2. Endereço de Entrega
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -410,6 +450,7 @@ export const Register: React.FC = () => {
                   onChange={(e) => setZipCode(maskCEP(e.target.value))}
                   placeholder="00000-000"
                   maxLength={9}
+                  required
                 />
 
                 <Select
@@ -432,6 +473,7 @@ export const Register: React.FC = () => {
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                     placeholder="Ex: Av. Paulista, Rua das Flores"
+                    required
                   />
                 </div>
 
@@ -456,6 +498,7 @@ export const Register: React.FC = () => {
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
                   placeholder="Ex: São Paulo"
+                  required
                 />
 
                 <Input
@@ -464,6 +507,7 @@ export const Register: React.FC = () => {
                   onChange={(e) => setState(e.target.value.toUpperCase())}
                   placeholder="Ex: SP"
                   maxLength={2}
+                  required
                 />
 
                 <div className="md:col-span-3">
@@ -472,10 +516,116 @@ export const Register: React.FC = () => {
                     value={pais}
                     onChange={(e) => setPais(e.target.value)}
                     placeholder="Brasil"
+                    required
                   />
                 </div>
               </div>
+
+              {/* Checkbox de mesmo endereço */}
+              <label className="flex items-center gap-2.5 cursor-pointer mt-2 p-3 rounded-xl bg-slate-950/40 border border-slate-800 hover:border-slate-700 transition-colors select-none">
+                <input
+                  type="checkbox"
+                  checked={sameBillingAddress}
+                  onChange={(e) => setSameBillingAddress(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-indigo-500/20 cursor-pointer"
+                />
+                <span className="text-xs font-semibold text-slate-300">
+                  O endereço de cobrança é o mesmo de entrega
+                </span>
+              </label>
             </div>
+
+            {/* SEÇÃO 3: ENDEREÇO DE COBRANÇA (Aparece apenas se o checkbox estiver desmarcado) */}
+            {!sameBillingAddress && (
+              <>
+                <div className="border-t border-slate-800" />
+                <div className="flex flex-col gap-4 animate-in fade-in duration-200">
+                  <div className="flex items-center gap-2 text-xs font-bold text-purple-400 uppercase tracking-wider">
+                    <MapPin className="w-3.5 h-3.5" />
+                    3. Endereço de Cobrança
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Input
+                      label="CEP de Cobrança"
+                      value={billingZipCode}
+                      onChange={(e) => setBillingZipCode(maskCEP(e.target.value))}
+                      placeholder="00000-000"
+                      maxLength={9}
+                      required
+                    />
+
+                    <Select
+                      label="Tipo de Residência"
+                      value={billingTipoResidencia}
+                      onChange={(e) => setBillingTipoResidencia(e.target.value)}
+                      options={tipoResidenciaOptions}
+                    />
+
+                    <Select
+                      label="Tipo Logradouro"
+                      value={billingTipoLogradouro}
+                      onChange={(e) => setBillingTipoLogradouro(e.target.value)}
+                      options={tipoLogradouroOptions}
+                    />
+
+                    <div className="md:col-span-2">
+                      <Input
+                        label="Logradouro / Rua"
+                        value={billingAddress}
+                        onChange={(e) => setBillingAddress(e.target.value)}
+                        placeholder="Ex: Av. Paulista, Rua das Flores"
+                        required
+                      />
+                    </div>
+
+                    <Input
+                      label="Número"
+                      value={billingNumero}
+                      onChange={(e) => setBillingNumero(e.target.value)}
+                      placeholder="Ex: 123"
+                      required
+                    />
+
+                    <Input
+                      label="Bairro"
+                      value={billingBairro}
+                      onChange={(e) => setBillingBairro(e.target.value)}
+                      placeholder="Ex: Centro"
+                      required
+                    />
+
+                    <Input
+                      label="Cidade"
+                      value={billingCity}
+                      onChange={(e) => setBillingCity(e.target.value)}
+                      placeholder="Ex: São Paulo"
+                      required
+                    />
+
+                    <Input
+                      label="Estado (UF)"
+                      value={billingState}
+                      onChange={(e) => setBillingState(e.target.value.toUpperCase())}
+                      placeholder="Ex: SP"
+                      maxLength={2}
+                      required
+                    />
+
+                    <div className="md:col-span-3">
+                      <Input
+                        label="País"
+                        value={billingPais}
+                        onChange={(e) => setBillingPais(e.target.value)}
+                        placeholder="Brasil"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
 
             {/* BOTÃO DE SUBMIT */}
             <div className="flex flex-col gap-3 pt-4 border-t border-slate-800">
