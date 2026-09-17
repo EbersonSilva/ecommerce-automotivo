@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ShoppingCart, User, Search, Shield, Package, LogOut } from 'lucide-react'
+import { ShoppingCart, User, Search, Shield, LogOut } from 'lucide-react'
 
 export const Header: React.FC = () => {
   const [cartCount, setCartCount] = useState(0)
@@ -62,9 +62,6 @@ export const Header: React.FC = () => {
             <span className="text-2xl font-black bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent tracking-tight">
               AutoPeças
             </span>
-            {/* <span className="bg-indigo-500/10 text-indigo-400 text-[10px] font-semibold px-2.5 py-0.5 rounded-full border border-indigo-500/20">
-              PROTÓTIPO
-            </span> */}
           </Link>
           <Link 
             to="/admin" 
@@ -93,10 +90,6 @@ export const Header: React.FC = () => {
         <div className="flex items-center gap-4 w-full md:w-auto justify-end">
           <Link to="/produtos" className="text-sm font-medium text-slate-300 hover:text-white transition-colors mr-2">
             Catálogo
-          </Link>
-
-          <Link to="/pedidos" className="text-slate-400 hover:text-slate-200 transition-colors relative p-1.5" title="Meus Pedidos">
-            <Package className="w-5 h-5" />
           </Link>
 
           {activeCustomer ? (
