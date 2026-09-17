@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { mockCustomers, mockOrders } from '../../mock/mockData'
-import type { Customer, Order } from '../../mock/mockData'
+import type { Customer, Order, Address } from '../../mock/mockData'
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
 import { ArrowLeft, User, MapPin, ClipboardList, Calendar } from 'lucide-react'
 import { getCustomerById } from '../../services/customerService'
+import { getCustomerAddresses } from '../../services/addressService'
+import { maskCEP } from '../../utils/inputMasks'
 
 /**
  * ==============================================================================
@@ -16,6 +18,7 @@ import { getCustomerById } from '../../services/customerService'
 export const CustomerDetail = () => {
   const { id } = useParams<{ id: string }>()
   const [customer, setCustomer] = useState<Customer | null>(null)
+  const [addresses, setAddresses] = useState<Address[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -25,11 +28,20 @@ export const CustomerDetail = () => {
     const loadData = async () => {
       setIsLoading(true)
       try {
-        // 1. Tenta carregar os dados cadastrais do PostgreSQL
+        // 1. Carrega os dados cadastrais do cliente do PostgreSQL
         const found = await getCustomerById(id)
         setCustomer(found)
 
-        // Carrega pedidos vinculados a este cliente
+        // 2. Carrega todos os endereços do cliente do PostgreSQL
+        try {
+          const foundAddresses = await getCustomerAddresses(id)
+          setAddresses(foundAddresses)
+        } catch (addrErr) {
+          console.warn('⚠️ Não foi possível carregar endereços do PostgreSQL:', addrErr)
+          setAddresses([])
+        }
+
+        // 3. Carrega pedidos vinculados a este cliente
         const savedOrders = localStorage.getItem('custom-orders')
         const ordersList = savedOrders ? JSON.parse(savedOrders) : []
         const combinedOrders = [...ordersList, ...mockOrders]
@@ -135,20 +147,49 @@ export const CustomerDetail = () => {
             </div>
           </div>
 
-          {/* Card de Endereço */}
-          <div className="bg-slate-900/40 border border-slate-900 p-6 rounded-2xl backdrop-blur-sm shadow-xl text-xs">
-            <h4 className="font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5 pb-2 border-b border-slate-850">
+          {/* Card de Endereços Registrados */}
+          <div className="bg-slate-900/40 border border-slate-900 p-6 rounded-2xl backdrop-blur-sm shadow-xl text-xs space-y-4">
+            <h4 className="font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-850">
               <MapPin className="w-4 h-4 text-indigo-400" />
-              Endereço Registrado
+              Endereços Cadastrados
             </h4>
-            {customer.address ? (
-              <div className="space-y-1 text-slate-300">
-                <p className="font-semibold">{customer.address}</p>
-                <p className="text-slate-450">{customer.city} - {customer.state}</p>
-                <p className="font-mono text-[10px] text-slate-500">CEP: {customer.zipCode}</p>
+            
+            {addresses.length > 0 ? (
+              <div className="space-y-3">
+                {addresses.map((addr, index) => (
+                  <div 
+                    key={addr.id || index} 
+                    className="p-3 rounded-xl bg-slate-950/50 border border-slate-850 space-y-1 text-slate-300"
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span
+                        className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${
+                          addr.tipoEndereco === 'ENTREGA'
+                            ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                            : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                        }`}
+                      >
+                        {addr.tipoEndereco}
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-medium">
+                        {addr.tipoResidencia}
+                      </span>
+                    </div>
+                    
+                    <p className="font-semibold text-slate-200">
+                      {addr.tipoLogradouro} {addr.logradouro}, {addr.numero}
+                    </p>
+                    <p className="text-slate-450 text-[11px]">
+                      {addr.bairro} - {addr.cidade}/{addr.estado}
+                    </p>
+                    <p className="font-mono text-[10px] text-slate-500">
+                      CEP: {maskCEP(addr.cep)} • {addr.pais}
+                    </p>
+                  </div>
+                ))}
               </div>
             ) : (
-              <p className="text-slate-500 italic">Nenhum endereço registrado.</p>
+              <p className="text-slate-500 italic">Nenhum endereço registrado no PostgreSQL.</p>
             )}
           </div>
         </div>

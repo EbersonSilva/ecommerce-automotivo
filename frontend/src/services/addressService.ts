@@ -2,6 +2,7 @@ import type { Address } from '../mock/mockData'
 
 const API_URL = 'http://localhost:3001/api/clientes'
 
+// BUSCA OS ENDEREÇOS CADASTRADOS PELO CLIENTE
 export async function getCustomerAddresses(customerId: string): Promise<Address[]> {
   const response = await fetch(`${API_URL}/${customerId}/enderecos`)
   const data = await response.json().catch(() => ({}))
@@ -13,6 +14,7 @@ export async function getCustomerAddresses(customerId: string): Promise<Address[
   return data
 }
 
+// CADASTRAR NOVO ENDEREÇO
 export async function createCustomerAddress(customerId: string, address: Address): Promise<Address> {
   const response = await fetch(`${API_URL}/${customerId}/enderecos`, {
     method: 'POST',
