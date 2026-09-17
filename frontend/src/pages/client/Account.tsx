@@ -4,14 +4,13 @@ import { Breadcrumb } from '../../components/ui/Breadcrumb'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Button } from '../../components/ui/Button'
-import { User, MapPin, Save, Ticket, RefreshCcw, Truck, Plus, CheckCircle2 } from 'lucide-react'
-import { mockCoupons, mockExchanges, mockCustomers, type Coupon, type Exchange, type Customer, type Address } from '../../mock/mockData'
+import { User, MapPin, Save, Ticket, RefreshCcw, Truck, Plus, CheckCircle2, Package, Eye, Calendar } from 'lucide-react'
+import { mockCoupons, mockExchanges, mockCustomers, mockOrders, type Coupon, type Exchange, type Customer, type Address, type Order } from '../../mock/mockData'
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
 import { Table } from '../../components/ui/Table'
 import { updateCustomer } from '../../services/customerService'
 import { getCustomerAddresses, createCustomerAddress } from '../../services/addressService'
-import { maskPhone,maskCEP, onlyNumbers } from '../../utils/inputMasks' // Importa a função maskCEP para aplicar máscara de CEP
-
+import { maskPhone, maskCEP, onlyNumbers } from '../../utils/inputMasks'
 
 const tipoResidenciaOptions = [
   { value: 'CASA', label: 'Casa' },
@@ -36,7 +35,7 @@ const tipoEnderecoOptions = [
 
 export const Account = () => {
   const [loggedCustomer, setLoggedCustomer] = useState<Customer | null>(null)
-  const [activeTab, setActiveTab] = useState<'profile' | 'coupons' | 'exchanges'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'coupons' | 'exchanges'>('profile')
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -58,11 +57,24 @@ export const Account = () => {
   const [newZipCode, setNewZipCode] = useState('')
   const [newPais, setNewPais] = useState('Brasil')
   const [isSavingAddress, setIsSavingAddress] = useState(false)
+
+  // Pedidos, Cupons e Trocas
+  const [orders, setOrders] = useState<Order[]>([])
   const [coupons, setCoupons] = useState<Coupon[]>([])
   const [exchanges, setExchanges] = useState<Exchange[]>([])
 
   const loadData = (currentCust: Customer | null) => {
     try {
+      // 1. Pedidos do Cliente
+      const savedOrders = localStorage.getItem('custom-orders')
+      const customOrders = savedOrders ? JSON.parse(savedOrders) : []
+      const allOrders = [...customOrders, ...mockOrders]
+      const filteredOrders = currentCust
+        ? allOrders.filter((o: Order) => o.customerId === currentCust.id || o.customerName === currentCust.name)
+        : allOrders
+      setOrders(filteredOrders)
+
+      // 2. Cupons do Cliente
       const savedCoupons = localStorage.getItem('custom-coupons')
       const customCoupons = savedCoupons ? JSON.parse(savedCoupons) : []
       const allCoupons = [...customCoupons, ...mockCoupons]
@@ -71,6 +83,7 @@ export const Account = () => {
         : allCoupons
       setCoupons(filteredCoupons)
 
+      // 3. Trocas e Devoluções do Cliente
       const savedExchanges = localStorage.getItem('custom-exchanges')
       let customExchanges = savedExchanges ? JSON.parse(savedExchanges) : []
       customExchanges = customExchanges.map((ex: any) => ({
@@ -86,12 +99,11 @@ export const Account = () => {
         : allExchanges
       setExchanges(filteredExchanges)
     } catch {
+      setOrders(mockOrders)
       setCoupons(mockCoupons)
       setExchanges(mockExchanges)
     }
   }
-
-
 
   const loadAddresses = async (customerId: string) => {
     setLoadingAddresses(true)
@@ -122,7 +134,6 @@ export const Account = () => {
     loadData(parsed)
   }, [])
 
-
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name || !email || !phone) {
@@ -142,7 +153,6 @@ export const Account = () => {
         phone
       }
 
-      // Tenta persistir no PostgreSQL via API
       try {
         await updateCustomer(current.id, { name, email, phone })
       } catch (apiErr) {
@@ -151,7 +161,6 @@ export const Account = () => {
 
       localStorage.setItem('logged-customer', JSON.stringify(updatedCustomer))
 
-      // Atualiza banco de dados local global
       const saved = localStorage.getItem('custom-customers')
       const customersList: Customer[] = saved ? JSON.parse(saved) : [...mockCustomers]
       const index = customersList.findIndex((c) => c.id === current.id)
@@ -162,9 +171,7 @@ export const Account = () => {
       }
       localStorage.setItem('custom-customers', JSON.stringify(customersList))
 
-      // Dispara evento para atualizar header
       window.dispatchEvent(new Event('auth-change'))
-
       alert('Perfil atualizado com sucesso!')
     } catch (err) {
       console.error(err)
@@ -200,7 +207,6 @@ export const Account = () => {
       await createCustomerAddress(loggedCustomer.id, addressPayload)
       alert('Endereço adicionado com sucesso!')
 
-      // Limpar formulário e recarregar lista
       setNewAddress('')
       setNewNumero('')
       setNewBairro('')
@@ -216,10 +222,9 @@ export const Account = () => {
     }
   }
 
-
   const handleDispatchItem = (exchangeId: string) => {
     const trackingCode = prompt('Digite o código de rastreamento do envio da devolução:')
-    if (trackingCode === null) return // canceled
+    if (trackingCode === null) return
 
     if (!trackingCode.trim()) {
       alert('Favor informar o código de rastreio para despacho.')
@@ -274,7 +279,7 @@ export const Account = () => {
           <div>
             <h2 className="text-xl font-black text-white tracking-tight mb-2">Identifique-se para acessar sua conta</h2>
             <p className="text-xs text-slate-500 leading-relaxed max-w-sm mx-auto">
-              Para consultar seus cupons de troca, pedidos e atualizar seus dados de entrega, realize o cadastro ou identifique-se por CPF.
+              Para consultar seus pedidos, cupons de troca e gerenciar seus dados de entrega, realize o cadastro ou identifique-se por CPF.
             </p>
           </div>
           <div className="flex flex-col gap-3 mt-2">
@@ -292,42 +297,54 @@ export const Account = () => {
     )
   }
 
-
   return (
-    <div className="flex flex-col gap-6 text-left max-w-4xl mx-auto w-full">
+    <div className="flex flex-col gap-6 text-left max-w-5xl mx-auto w-full">
       <Breadcrumb items={[{ label: 'Minha Conta' }]} />
 
-      <div className="mb-4">
+      <div className="mb-2">
         <h1 className="text-3xl font-black text-white tracking-tight">Minha Conta</h1>
-        <p className="text-xs text-slate-500 font-medium">Gerencie seu perfil, consulte cupons de troca e acompanhe devoluções</p>
+        <p className="text-xs text-slate-500 font-medium">Gerencie seu perfil, acompanhe seus pedidos, cupons e devoluções</p>
       </div>
 
       {/* Tabs Selector */}
-      <div className="flex border-b border-slate-800 gap-6 mb-2">
+      <div className="flex border-b border-slate-800 gap-6 mb-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('profile')}
-          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 ${activeTab === 'profile'
+          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 whitespace-nowrap ${
+            activeTab === 'profile'
               ? 'border-indigo-500 text-white font-black'
               : 'border-transparent text-slate-550 hover:text-slate-200'
-            }`}
+          }`}
         >
           Meus Dados
         </button>
         <button
-          onClick={() => setActiveTab('coupons')}
-          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 ${activeTab === 'coupons'
+          onClick={() => setActiveTab('orders')}
+          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 whitespace-nowrap ${
+            activeTab === 'orders'
               ? 'border-indigo-500 text-white font-black'
               : 'border-transparent text-slate-550 hover:text-slate-200'
-            }`}
+          }`}
+        >
+          Meus Pedidos
+        </button>
+        <button
+          onClick={() => setActiveTab('coupons')}
+          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 whitespace-nowrap ${
+            activeTab === 'coupons'
+              ? 'border-indigo-500 text-white font-black'
+              : 'border-transparent text-slate-550 hover:text-slate-200'
+          }`}
         >
           Meus Cupons
         </button>
         <button
           onClick={() => setActiveTab('exchanges')}
-          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 ${activeTab === 'exchanges'
+          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 whitespace-nowrap ${
+            activeTab === 'exchanges'
               ? 'border-indigo-500 text-white font-black'
               : 'border-transparent text-slate-550 hover:text-slate-200'
-            }`}
+          }`}
         >
           Minhas Devoluções / Trocas
         </button>
@@ -525,10 +542,11 @@ export const Account = () => {
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
                         <span
-                          className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${addr.tipoEndereco === 'ENTREGA'
+                          className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${
+                            addr.tipoEndereco === 'ENTREGA'
                               ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
                               : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-                            }`}
+                          }`}
                         >
                           {addr.tipoEndereco}
                         </span>
@@ -561,8 +579,69 @@ export const Account = () => {
         </div>
       )}
 
+      {/* TAB 2: Orders List (NOVA ABA DE MEUS PEDIDOS) */}
+      {activeTab === 'orders' && (
+        <div className="bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-6 animate-fadeIn mt-2">
+          <div className="flex items-center gap-2 pb-3 border-b border-slate-850">
+            <Package className="w-5 h-5 text-indigo-400" />
+            <h3 className="text-base font-bold text-slate-200 uppercase tracking-wider">
+              Histórico de Pedidos
+            </h3>
+          </div>
 
-      {/* TAB 2: Coupons List */}
+          {orders.length > 0 ? (
+            <Table headers={['Código', 'Data', 'Itens do Pedido', 'Total', 'Status', 'Ações']}>
+              {orders.map((order) => (
+                <tr key={order.id} className="hover:bg-slate-900/35 transition-colors">
+                  <td className="px-6 py-4 font-mono font-bold text-indigo-400 text-xs">
+                    {order.id}
+                  </td>
+                  <td className="px-6 py-4 text-xs font-mono text-slate-400">
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                      {order.date}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-xs text-slate-300 max-w-[260px] truncate" title={order.items.map((i) => `${i.name} (${i.quantity}x)`).join(', ')}>
+                    {order.items.map((i) => `${i.name} (${i.quantity}x)`).join(', ')}
+                  </td>
+                  <td className="px-6 py-4 font-mono font-bold text-slate-100 text-xs">
+                    R$ {order.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </td>
+                  <td className="px-6 py-4">
+                    <Badge variant={getStatusVariant(order.status)}>
+                      {order.status}
+                    </Badge>
+                  </td>
+                  <td className="px-6 py-4">
+                    <Link to={`/pedidos/${order.id}`}>
+                      <Button variant="secondary" size="sm" className="flex items-center gap-1.5 py-1 px-2.5 text-xs">
+                        <Eye className="w-3.5 h-3.5 text-indigo-400" />
+                        Detalhes
+                      </Button>
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </Table>
+          ) : (
+            <div className="text-center py-12 bg-slate-950/20 border border-slate-850 rounded-2xl">
+              <Package className="w-10 h-10 text-slate-600 mx-auto mb-3" />
+              <h4 className="text-sm font-bold text-slate-300 mb-1">Nenhum pedido realizado ainda</h4>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto mb-4">
+                Explore nosso catálogo automotivo e faça seu primeiro pedido!
+              </p>
+              <Link to="/produtos">
+                <Button size="sm" className="px-6">
+                  Ver Catálogo de Peças
+                </Button>
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 3: Coupons List */}
       {activeTab === 'coupons' && (
         <div className="bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-6 animate-fadeIn mt-2">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-850">
@@ -605,7 +684,7 @@ export const Account = () => {
         </div>
       )}
 
-      {/* TAB 3: Exchange Requests */}
+      {/* TAB 4: Exchange Requests */}
       {activeTab === 'exchanges' && (
         <div className="bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-6 animate-fadeIn mt-2">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-850">
