@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Button } from '../../components/ui/Button'
+import { Modal } from '../../components/ui/Modal'
 import { ArrowLeft, Save, UserPlus, MapPin, Plus, CheckCircle2 } from 'lucide-react'
 import type { Address } from '../../mock/mockData'
 import { getCustomerById, createCustomer, updateCustomer } from '../../services/customerService'
@@ -47,6 +48,10 @@ export const CustomerForm = () => {
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [status, setStatus] = useState<'Ativo' | 'Inativo'>('Ativo')
+  // Estado para o Modal de Sucesso
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [modalMessage, setModalMessage] = useState('')
+
 
   // 2. Endereço de Entrega (Modo Criação)
   const [tipoResidencia, setTipoResidencia] = useState('CASA')
@@ -155,8 +160,8 @@ export const CustomerForm = () => {
       if (isEdit && id) {
         // Atualiza dados cadastrais no PostgreSQL (PUT /api/clientes/:id)
         await updateCustomer(id, customerPayload)
-        alert('Dados cadastrais do cliente atualizados com sucesso!')
-        navigate('/admin/clientes')
+        setModalMessage('Dados cadastrais do cliente atualizados com sucesso!')
+        setShowSuccessModal(true)
       } else {
         // Monta os payloads de Entrega e Cobrança
         const enderecoEntregaPayload = {
@@ -175,31 +180,31 @@ export const CustomerForm = () => {
 
         const enderecoCobrancaPayload = sameBillingAddress
           ? {
-              tipoEndereco: 'COBRANCA' as const,
-              tipoResidencia,
-              tipoLogradouro,
-              logradouro: address,
-              numero,
-              bairro,
-              cep: onlyNumbers(zipCode),
-              cidade: city,
-              estado: state,
-              pais,
-              observacoes: ''
-            }
+            tipoEndereco: 'COBRANCA' as const,
+            tipoResidencia,
+            tipoLogradouro,
+            logradouro: address,
+            numero,
+            bairro,
+            cep: onlyNumbers(zipCode),
+            cidade: city,
+            estado: state,
+            pais,
+            observacoes: ''
+          }
           : {
-              tipoEndereco: 'COBRANCA' as const,
-              tipoResidencia: billingTipoResidencia,
-              tipoLogradouro: billingTipoLogradouro,
-              logradouro: billingAddress,
-              numero: billingNumero,
-              bairro: billingBairro,
-              cep: onlyNumbers(billingZipCode),
-              cidade: billingCity,
-              estado: billingState,
-              pais: billingPais,
-              observacoes: ''
-            }
+            tipoEndereco: 'COBRANCA' as const,
+            tipoResidencia: billingTipoResidencia,
+            tipoLogradouro: billingTipoLogradouro,
+            logradouro: billingAddress,
+            numero: billingNumero,
+            bairro: billingBairro,
+            cep: onlyNumbers(billingZipCode),
+            cidade: billingCity,
+            estado: billingState,
+            pais: billingPais,
+            observacoes: ''
+          }
 
         // Cria novo cliente no PostgreSQL (POST /api/clientes)
         await createCustomer({
@@ -208,8 +213,8 @@ export const CustomerForm = () => {
           enderecoCobranca: enderecoCobrancaPayload
         })
 
-        alert('Novo cliente cadastrado com sucesso no banco de dados!')
-        navigate('/admin/clientes')
+        setModalMessage('Novo cliente cadastrado com sucesso no banco de dados!')
+        setShowSuccessModal(true)
       }
     } catch (err: any) {
       alert(`Erro ao gravar registro: ${err.message}`)
@@ -267,8 +272,8 @@ export const CustomerForm = () => {
 
   return (
     <div className="flex flex-col gap-6 text-left max-w-5xl mx-auto w-full">
-      <Link 
-        to="/admin/clientes" 
+      <Link
+        to="/admin/clientes"
         className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-350 uppercase tracking-widest transition-colors mb-2"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
@@ -280,8 +285,8 @@ export const CustomerForm = () => {
           {isEdit ? 'Editar Cliente' : 'Cadastrar Cliente'}
         </h1>
         <p className="text-xs text-slate-500 font-medium">
-          {isEdit 
-            ? 'Atualize as informações cadastrais e gerencie os endereços do cliente no PostgreSQL' 
+          {isEdit
+            ? 'Atualize as informações cadastrais e gerencie os endereços do cliente no PostgreSQL'
             : 'Adicione um novo cliente com endereços de entrega e cobrança na base de dados'}
         </p>
       </div>
@@ -495,11 +500,10 @@ export const CustomerForm = () => {
                       <div className="flex flex-col gap-1">
                         <div className="flex items-center gap-2">
                           <span
-                            className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${
-                              addr.tipoEndereco === 'ENTREGA'
-                                ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
-                                : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-                            }`}
+                            className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${addr.tipoEndereco === 'ENTREGA'
+                              ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                              : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                              }`}
                           >
                             {addr.tipoEndereco}
                           </span>
@@ -706,6 +710,31 @@ export const CustomerForm = () => {
           )}
         </div>
       </div>
+      {/* MODAL DE SUCESSO */}
+      <Modal
+        isOpen={showSuccessModal}
+        onClose={() => {
+          setShowSuccessModal(false)
+          navigate('/admin/clientes')
+        }}
+        title="Sucesso!"
+        footer={
+          <Button
+            variant="primary"
+            onClick={() => {
+              setShowSuccessModal(false)
+              navigate('/admin/clientes')
+            }}
+          >
+            OK, Continuar
+          </Button>
+        }
+      >
+        <div className="flex items-center gap-4 py-3">
+          <CheckCircle2 className="w-10 h-10 text-emerald-400 flex-shrink-0" />
+          <p className="text-slate-200 text-base">{modalMessage}</p>
+        </div>
+      </Modal>
     </div>
   )
 }
