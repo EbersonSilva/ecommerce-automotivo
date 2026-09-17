@@ -5,6 +5,7 @@ import type { Customer } from '../../mock/mockData'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Button } from '../../components/ui/Button'
+import { Modal } from '../../components/ui/Modal'
 import {
   ArrowLeft, UserPlus, Search, ShieldCheck, User, MapPin, Sparkles, CheckCircle2, Truck, Ticket
 } from 'lucide-react'
@@ -73,9 +74,11 @@ export const Register: React.FC = () => {
   const [billingNumero, setBillingNumero] = useState('')
   const [billingBairro, setBillingBairro] = useState('')
   const [billingPais, setBillingPais] = useState('Brasil')
-
-
+    // Estado para o Modal de Sucesso
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [modalMessage, setModalMessage] = useState('')
   const [isRegistering, setIsRegistering] = useState(false)
+
 
   /**
    * FUNÇÃO 1: Identificar Cliente por CPF no PostgreSQL
@@ -220,8 +223,9 @@ export const Register: React.FC = () => {
       localStorage.setItem('logged-customer', JSON.stringify(newCustomer))
       window.dispatchEvent(new Event('auth-change'))
 
-      alert('Cadastro realizado com sucesso no banco de dados!')
-      navigate(fromCheckout ? '/checkout' : '/minha-conta')
+      setModalMessage('Seu cadastro foi realizado com sucesso!')
+      setShowSuccessModal(true)
+
     } catch (err: any) {
       console.warn('⚠️ Tentando fallback local para cadastro...', err)
 
@@ -641,6 +645,31 @@ export const Register: React.FC = () => {
         </div>
 
       </div>
+       {/* MODAL DE SUCESSO DO CLIENTE */}
+      <Modal
+        isOpen={showSuccessModal}
+        onClose={() => {
+          setShowSuccessModal(false)
+          navigate(fromCheckout ? '/checkout' : '/minha-conta')
+        }}
+        title="Cadastro Concluído!"
+        footer={
+          <Button
+            variant="primary"
+            onClick={() => {
+              setShowSuccessModal(false)
+              navigate(fromCheckout ? '/checkout' : '/minha-conta')
+            }}
+          >
+            OK, Acessar Minha Conta
+          </Button>
+        }
+      >
+        <div className="flex items-center gap-4 py-3">
+          <CheckCircle2 className="w-10 h-10 text-emerald-400 flex-shrink-0" />
+          <p className="text-slate-200 text-base">{modalMessage}</p>
+        </div>
+      </Modal>
     </div>
   )
 
