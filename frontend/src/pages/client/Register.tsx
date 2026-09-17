@@ -103,12 +103,12 @@ export const Register: React.FC = () => {
         return
       }
 
-      // Salva sessão local no navegador
+            // Salva sessão local no navegador
       localStorage.setItem('logged-customer', JSON.stringify(found))
       window.dispatchEvent(new Event('auth-change'))
 
-      alert(`Bem-vindo de volta, ${found.name}!`)
       navigate(fromCheckout ? '/checkout' : '/minha-conta')
+
     } catch (err: any) {
       console.warn('⚠️ Tentando fallback local para busca de CPF...', err)
 

@@ -28,7 +28,7 @@ function generateRandomCPF(): string {
 describe('CRUD de Clientes - Painel Administrativo', () => {
   const timestamp = Date.now()
   const testCustomer = {
-    name: `Cliente Teste ${timestamp.toString().slice(-4)}`,
+    name: `Teste${timestamp.toString().slice(-4)}`,
     cpf: generateRandomCPF(),
     email: `teste${timestamp}@gmail.com`,
     phone: '11988887777',
