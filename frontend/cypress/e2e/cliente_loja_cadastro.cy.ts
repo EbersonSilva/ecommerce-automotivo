@@ -106,3 +106,5 @@ describe('Fluxo do Cliente (Auto-Cadastro e Acesso)', () => {
     cy.wait(PAUSE_TIME)
   })
 })
+
+export {}

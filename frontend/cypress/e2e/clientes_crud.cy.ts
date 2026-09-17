@@ -178,3 +178,5 @@ describe('CRUD de Clientes - Painel Administrativo', () => {
     cy.wait(PAUSE_TIME)
   })
 })
+
+export {}
