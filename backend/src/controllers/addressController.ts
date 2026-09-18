@@ -252,23 +252,43 @@ export const updateAddress = async (req: Request, res: Response): Promise<void> 
   }
 }
 
-// Exclui um endereço de um cliente
+// Exclui um endereço de um cliente garantindo a regra de negócio (mínimo de 1 de Entrega e 1 de Cobrança)
 export const deleteAddress = async (req: Request, res: Response): Promise<void> => {
   try {
     const { clienteId, id } = req.params
 
+    // 1. Busca o endereço para saber o tipo (ENTREGA ou COBRANCA)
+    const findSql = `SELECT tipo_endereco AS "tipoEndereco" FROM enderecos WHERE id = $1 AND cliente_id = $2`
+    const findResult = await query(findSql, [id, clienteId])
+
+    if (findResult.rowCount === 0) {
+      res.status(404).json({ error: 'Endereço não encontrado para este cliente.' })
+      return
+    }
+
+    const tipoEndereco = findResult.rows[0].tipoEndereco
+
+    // 2. Conta quantos endereços desse mesmo tipo o cliente ainda possui
+    const countSql = `SELECT COUNT(*) FROM enderecos WHERE cliente_id = $1 AND tipo_endereco = $2`
+    const countResult = await query(countSql, [clienteId, tipoEndereco])
+    const count = parseInt(countResult.rows[0].count, 10)
+
+    // Se for o único endereço desse tipo, bloqueia a exclusão
+    if (count <= 1) {
+      res.status(400).json({
+        error: `Regra de Negócio: Não é permitido excluir o único endereço de ${tipoEndereco === 'ENTREGA' ? 'Entrega' : 'Cobrança'} cadastrado. Cadastre outro antes de excluir este.`
+      })
+      return
+    }
+
+    // 3. Executa a exclusão com segurança
     const sql = `
       DELETE FROM enderecos
       WHERE id = $1 AND cliente_id = $2
       RETURNING id
     `
 
-    const result = await query(sql, [id, clienteId])
-
-    if (result.rowCount === 0) {
-      res.status(404).json({ error: 'Endereço não encontrado para este cliente.' })
-      return
-    }
+    await query(sql, [id, clienteId])
 
     res.status(200).json({ message: 'Endereço excluído com sucesso.' })
   } catch (error: any) {
@@ -278,3 +298,4 @@ export const deleteAddress = async (req: Request, res: Response): Promise<void> 
     })
   }
 }
+

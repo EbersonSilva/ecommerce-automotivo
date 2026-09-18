@@ -260,6 +260,22 @@ export const Account = () => {
       setIsSavingAddress(false)
     }
   }
+    // Função para checar e abrir o modal de exclusão
+  const handleOpenDeleteAddress = (addr: Address) => {
+    // Conta quantos endereços do mesmo tipo o cliente tem
+    const sameTypeAddresses = addresses.filter((a) => a.tipoEndereco === addr.tipoEndereco)
+
+    if (sameTypeAddresses.length <= 1) {
+      setModalMessage(
+        `Não é possível excluir o único endereço de ${addr.tipoEndereco === 'ENTREGA' ? 'Entrega' : 'Cobrança'} cadastrado. Você pode editá-lo no botão ✏️ ou cadastrar um novo endereço antes de remover este.`
+      )
+      setShowSuccessModal(true)
+      return
+    }
+
+    setAddressToDelete(addr)
+  }
+
 
   // Função para Excluir Endereço no PostgreSQL
   const handleDeleteAddressConfirm = async () => {
@@ -624,12 +640,13 @@ export const Account = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setAddressToDelete(addr)}
+                        onClick={() => handleOpenDeleteAddress(addr)}
                         className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-slate-800 hover:border-rose-500/30 transition-all cursor-pointer"
                         title="Excluir Endereço"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
+
                     </div>
 
                   </div>
