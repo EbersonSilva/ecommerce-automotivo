@@ -11,7 +11,7 @@ import { Badge, getStatusVariant } from '../../components/ui/Badge'
 import { Table } from '../../components/ui/Table'
 import { updateCustomer } from '../../services/customerService'
 import { getCustomerAddresses, createCustomerAddress, updateCustomerAddress, deleteCustomerAddress } from '../../services/addressService'
-import { maskPhone, maskCEP, onlyNumbers } from '../../utils/inputMasks'
+import { maskPhone, maskCPF, maskCEP, onlyNumbers } from '../../utils/inputMasks'
 
 const tipoResidenciaOptions = [
   { value: 'CASA', label: 'Casa' },
@@ -134,8 +134,8 @@ export const Account = () => {
       setLoggedCustomer(parsed)
       setName(parsed?.name || '')
       setEmail(parsed?.email || '')
-      setPhone(parsed?.phone || '')
-      setCpf(parsed?.cpf || '')
+      setPhone(parsed?.phone ? maskPhone(parsed.phone) : '')
+      setCpf(parsed?.cpf ? maskCPF(parsed.cpf) : '')
       if (parsed?.id) {
         loadAddresses(parsed.id)
       }

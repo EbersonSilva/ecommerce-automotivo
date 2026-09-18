@@ -115,9 +115,9 @@ export const CustomerForm = () => {
         try {
           const found = await getCustomerById(id)
           setName(found.name)
-          setCpf(found.cpf)
+          setCpf(found.cpf ? maskCPF(found.cpf) : '')
           setEmail(found.email)
-          setPhone(found.phone)
+          setPhone(found.phone ? maskPhone(found.phone) : '')
           setStatus(found.status)
           await loadAddresses(id)
         } catch (err: any) {
