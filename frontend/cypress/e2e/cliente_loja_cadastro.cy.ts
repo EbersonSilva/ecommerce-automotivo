@@ -1,9 +1,10 @@
 /**
  * ==============================================================================
- * SUÍTE DE TESTES E2E: AUTO-CADASTRO E IDENTIFICAÇÃO DO CLIENTE NA LOJA PÚBLICA
+ * SUÍTE DE TESTES E2E: FLUXO DO CLIENTE NA LOJA PÚBLICA
  * ==============================================================================
- * Demonstra o fluxo do cliente final realizando seu próprio cadastro na loja,
- * confirmando via Modal e visualizando seus dados em "Minha Conta".
+ * 1. Auto-Cadastro com endereço de entrega e cobrança.
+ * 2. Atualização dos dados cadastrais pelo próprio cliente (Minha Conta).
+ * 3. Identificação e Login rápido pelo CPF.
  */
 
 // ⏱️ CONTROLE DE VELOCIDADE DA APRESENTAÇÃO
@@ -25,7 +26,7 @@ function generateRandomCPF(): string {
   return `${n[0]}${n[1]}${n[2]}.${n[3]}${n[4]}${n[5]}.${n[6]}${n[7]}${n[8]}-${n[9]}${n[10]}`
 }
 
-describe('Fluxo do Cliente (Auto-Cadastro e Acesso)', () => {
+describe('Fluxo do Cliente - Loja Pública', () => {
   const timestamp = Date.now()
   const clienteLoja = {
     name: `Cliente${timestamp.toString().slice(-4)}`,
@@ -79,15 +80,41 @@ describe('Fluxo do Cliente (Auto-Cadastro e Acesso)', () => {
     // 5. Valida Área do Cliente (Minha Conta)
     cy.url().should('include', '/minha-conta')
     cy.contains('h1', 'Minha Conta').should('be.visible')
-    cy.get('input[value="' + clienteLoja.name + '"]').should('be.visible')
+    cy.contains('label', 'Nome Completo').parent().find('input').should('have.value', clienteLoja.name)
     cy.contains(clienteLoja.logradouro).should('be.visible')
     cy.wait(PAUSE_TIME)
   })
 
   // ----------------------------------------------------------------------------
-  // CENÁRIO 2: Identificação rápida por CPF (Já sou cliente)
+  // CENÁRIO 2: Atualização de Dados Cadastrais pelo Próprio Cliente (Update)
   // ----------------------------------------------------------------------------
-  it('2. Deve localizar a conta existente informando apenas o CPF', () => {
+  it('2. Deve atualizar as informações cadastrais do cliente em Minha Conta', () => {
+    cy.visit('/minha-conta')
+    cy.wait(PAUSE_TIME)
+
+    // Altera o telefone para um novo número
+    const novoTelefone = '11999998888'
+    cy.contains('label', 'Telefone').parent().find('input').clear().type(novoTelefone, { delay: TYPING_SPEED })
+    cy.wait(PAUSE_TIME)
+
+    // Clica em Salvar Perfil
+    cy.contains('button', 'Salvar Perfil').click()
+    cy.wait(PAUSE_TIME)
+
+    // Confirma o Modal de Sucesso
+    cy.contains('Sucesso!').should('be.visible')
+    cy.contains('button', 'OK, Entendi').click()
+    cy.wait(PAUSE_TIME)
+
+    // Valida que o telefone permaneceu atualizado
+    cy.contains('label', 'Telefone').parent().find('input').should('have.value', '(11) 99999-8888')
+    cy.wait(PAUSE_TIME)
+  })
+
+  // ----------------------------------------------------------------------------
+  // CENÁRIO 3: Identificação rápida por CPF (Já sou cliente)
+  // ----------------------------------------------------------------------------
+  it('3. Deve localizar a conta existente informando apenas o CPF', () => {
     cy.visit('/cadastro')
     cy.wait(PAUSE_TIME)
 
@@ -102,7 +129,7 @@ describe('Fluxo do Cliente (Auto-Cadastro e Acesso)', () => {
     // Valida que acessou a conta com os dados do cliente carregados do PostgreSQL
     cy.url().should('include', '/minha-conta')
     cy.contains('h1', 'Minha Conta').should('be.visible')
-    cy.get('input[value="' + clienteLoja.name + '"]').should('be.visible')
+    cy.contains('label', 'Nome Completo').parent().find('input').should('have.value', clienteLoja.name)
     cy.wait(PAUSE_TIME)
   })
 })

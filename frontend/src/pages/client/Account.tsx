@@ -4,6 +4,7 @@ import { Breadcrumb } from '../../components/ui/Breadcrumb'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Button } from '../../components/ui/Button'
+import { Modal } from '../../components/ui/Modal'
 import { User, MapPin, Save, Ticket, RefreshCcw, Truck, Plus, CheckCircle2, Package, Eye, Calendar } from 'lucide-react'
 import { mockCoupons, mockExchanges, mockCustomers, mockOrders, type Coupon, type Exchange, type Customer, type Address, type Order } from '../../mock/mockData'
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
@@ -36,7 +37,8 @@ const tipoEnderecoOptions = [
 export const Account = () => {
   const [loggedCustomer, setLoggedCustomer] = useState<Customer | null>(null)
   const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'coupons' | 'exchanges'>('profile')
-
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [modalMessage, setModalMessage] = useState('') 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -172,7 +174,8 @@ export const Account = () => {
       localStorage.setItem('custom-customers', JSON.stringify(customersList))
 
       window.dispatchEvent(new Event('auth-change'))
-      alert('Perfil atualizado com sucesso!')
+      setModalMessage('Perfil e dados cadastrais atualizados com sucesso no banco de dados!')
+      setShowSuccessModal(true)
     } catch (err) {
       console.error(err)
       alert('Erro ao atualizar perfil.')
@@ -740,6 +743,26 @@ export const Account = () => {
           )}
         </div>
       )}
+            {/* MODAL DE SUCESSO DE ATUALIZAÇÃO DO PERFIL */}
+      <Modal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title="Sucesso!"
+        footer={
+          <Button
+            variant="primary"
+            onClick={() => setShowSuccessModal(false)}
+          >
+            OK, Entendi
+          </Button>
+        }
+      >
+        <div className="flex items-center gap-4 py-3">
+          <CheckCircle2 className="w-10 h-10 text-emerald-400 flex-shrink-0" />
+          <p className="text-slate-200 text-base">{modalMessage}</p>
+        </div>
+      </Modal>
+
     </div>
   )
 }
