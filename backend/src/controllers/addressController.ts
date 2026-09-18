@@ -22,6 +22,7 @@ export const createAddress = async (req: Request, res: Response): Promise<void> 
 
     if (
       !tipoEndereco ||
+
       !tipoResidencia ||
       !tipoLogradouro ||
       !logradouro ||
@@ -139,6 +140,141 @@ export const getAddressesByCustomer = async (
     console.error('Erro ao buscar endereços:', error)
     res.status(500).json({
       error: 'Erro ao buscar endereços do cliente.'
+    })
+  }
+}
+
+// Atualiza um endereço existente de um cliente
+export const updateAddress = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { clienteId, id } = req.params
+
+    const {
+      tipoEndereco,
+      tipoResidencia,
+      tipoLogradouro,
+      logradouro,
+      numero,
+      bairro,
+      cep,
+      cidade,
+      estado,
+      pais,
+      observacoes
+    } = req.body
+
+    if (
+      !tipoEndereco ||
+      !tipoResidencia ||
+      !tipoLogradouro ||
+      !logradouro ||
+      !numero ||
+      !bairro ||
+      !cep ||
+      !cidade ||
+      !estado ||
+      !pais
+    ) {
+      res.status(400).json({
+        error: 'Todos os campos obrigatórios do endereço devem ser preenchidos.'
+      })
+      return
+    }
+
+    const cleanCep = String(cep).replace(/\D/g, '')
+
+    if (!/^\d{8}$/.test(cleanCep)) {
+      res.status(400).json({
+        error: 'O CEP deve conter exatamente 8 números.'
+      })
+      return
+    }
+
+    const sql = `
+      UPDATE enderecos SET
+        tipo_endereco = $1,
+        tipo_residencia = $2,
+        tipo_logradouro = $3,
+        logradouro = $4,
+        numero = $5,
+        bairro = $6,
+        cep = $7,
+        cidade = $8,
+        estado = $9,
+        pais = $10,
+        observacoes = $11
+      WHERE id = $12 AND cliente_id = $13
+      RETURNING
+        id,
+        cliente_id AS "clienteId",
+        tipo_endereco AS "tipoEndereco",
+        tipo_residencia AS "tipoResidencia",
+        tipo_logradouro AS "tipoLogradouro",
+        logradouro,
+        numero,
+        bairro,
+        cep,
+        cidade,
+        estado,
+        pais,
+        observacoes
+    `
+
+    const values = [
+      tipoEndereco,
+      tipoResidencia,
+      tipoLogradouro,
+      logradouro,
+      numero,
+      bairro,
+      cleanCep,
+      cidade,
+      estado,
+      pais,
+      observacoes || null,
+      id,
+      clienteId
+    ]
+
+    const result = await query(sql, values)
+
+    if (result.rowCount === 0) {
+      res.status(404).json({ error: 'Endereço não encontrado para este cliente.' })
+      return
+    }
+
+    res.status(200).json(result.rows[0])
+  } catch (error: any) {
+    console.error('Erro ao atualizar endereço:', error)
+    res.status(500).json({
+      error: 'Erro ao atualizar endereço no banco de dados.'
+    })
+  }
+}
+
+// Exclui um endereço de um cliente
+export const deleteAddress = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { clienteId, id } = req.params
+
+    const sql = `
+      DELETE FROM enderecos
+      WHERE id = $1 AND cliente_id = $2
+      RETURNING id
+    `
+
+    const result = await query(sql, [id, clienteId])
+
+    if (result.rowCount === 0) {
+      res.status(404).json({ error: 'Endereço não encontrado para este cliente.' })
+      return
+    }
+
+    res.status(200).json({ message: 'Endereço excluído com sucesso.' })
+  } catch (error: any) {
+    console.error('Erro ao excluir endereço:', error)
+    res.status(500).json({
+      error: 'Erro ao excluir endereço no banco de dados.'
     })
   }
 }
