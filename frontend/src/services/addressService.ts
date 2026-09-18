@@ -31,7 +31,7 @@ export async function createCustomerAddress(customerId: string, address: Address
 }
 
 // 3. ATUALIZAR ENDEREÇO EXISTENTE
-export async function updateCustomerAddress(customerId: string, addressId: string, address: Address): Promise<Address> {
+export async function updateCustomerAddress(customerId: string, addressId: string | number, address: Address): Promise<Address> {
   const response = await fetch(`${API_URL}/${customerId}/enderecos/${addressId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -46,8 +46,9 @@ export async function updateCustomerAddress(customerId: string, addressId: strin
   return data
 }
 
+
 // 4. EXCLUIR ENDEREÇO DO BANCO DE DADOS
-export async function deleteCustomerAddress(customerId: string, addressId: string): Promise<void> {
+export async function deleteCustomerAddress(customerId: string, addressId: string | number): Promise<void> {
   const response = await fetch(`${API_URL}/${customerId}/enderecos/${addressId}`, {
     method: 'DELETE'
   })

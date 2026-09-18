@@ -30,3 +30,6 @@ out/
 Thumbs.db
 .DS_Store
 .system_generated/
+cypress/screenshots/
+cypress/videos/
+

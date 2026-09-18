@@ -60,8 +60,10 @@ export const Account = () => {
   const [newPais, setNewPais] = useState('Brasil')
   const [isSavingAddress, setIsSavingAddress] = useState(false)
   // Estados para Edição e Exclusão de Endereços
-  const [editingAddressId, setEditingAddressId] = useState<string | null>(null)
+  // Estados para Edição e Exclusão de Endereços
+  const [editingAddressId, setEditingAddressId] = useState<string | number | null>(null)
   const [addressToDelete, setAddressToDelete] = useState<Address | null>(null)
+
 
 
 
@@ -189,7 +191,7 @@ export const Account = () => {
 
   // Função para abrir o formulário em modo Edição com os dados preenchidos
   const handleOpenEditAddress = (addr: Address) => {
-    setEditingAddressId(addr.id)
+    setEditingAddressId(addr.id ?? null)
     setTipoEndereco(addr.tipoEndereco as 'ENTREGA' | 'COBRANCA')
     setTipoResidencia(addr.tipoResidencia || 'Casa')
     setTipoLogradouro(addr.tipoLogradouro || 'Rua')

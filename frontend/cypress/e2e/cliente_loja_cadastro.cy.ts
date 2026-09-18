@@ -88,7 +88,15 @@ describe('Fluxo do Cliente - Loja Pública', () => {
   // ----------------------------------------------------------------------------
   // CENÁRIO 2: Atualização de Dados Cadastrais pelo Próprio Cliente (Update)
   // ----------------------------------------------------------------------------
-  it('2. Deve atualizar as informações cadastrais do cliente em Minha Conta', () => {
+    it('2. Deve atualizar as informações cadastrais do cliente em Minha Conta', () => {
+    // Busca o cliente recém-cadastrado no PostgreSQL pelo CPF para obter o ID real
+    cy.request('GET', `http://localhost:3001/api/clientes/cpf/${clienteLoja.cpf}`).then((response) => {
+      const dbCustomer = response.body
+      cy.window().then((win) => {
+        win.localStorage.setItem('logged-customer', JSON.stringify(dbCustomer))
+      })
+    })
+
     cy.visit('/minha-conta')
     cy.wait(PAUSE_TIME)
 
@@ -110,6 +118,7 @@ describe('Fluxo do Cliente - Loja Pública', () => {
     cy.contains('label', 'Telefone').parent().find('input').should('have.value', '(11) 99999-8888')
     cy.wait(PAUSE_TIME)
   })
+
 
   // ----------------------------------------------------------------------------
   // CENÁRIO 3: Identificação rápida por CPF (Já sou cliente)
