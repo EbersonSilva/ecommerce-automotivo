@@ -1,10 +1,19 @@
 /**
  * ==============================================================================
  * SUÍTE DE TESTES E2E: FLUXO DO CLIENTE NA LOJA PÚBLICA
+ * Módulo de Gestão de Clientes - DRS_LES_1_2026
  * ==============================================================================
- * 1. Auto-Cadastro com endereço de entrega e cobrança.
- * 2. Atualização dos dados cadastrais pelo próprio cliente (Minha Conta).
- * 3. Identificação e Login rápido pelo CPF.
+ * Mapeamento dos Requisitos Cobertos:
+ *  - [RF0021] Cadastrar cliente (Auto-cadastro pelo e-commerce)
+ *  - [RF0022] Alterar cliente (Auto-gestão pelo perfil Minha Conta)
+ *  - [RF0024] Consulta de clientes (Identificação rápida por CPF)
+ *  - [RF0026] Cadastro e associação de endereços de entrega
+ *  - [RN0021] Obrigatoriedade de ao menos um endereço de cobrança
+ *  - [RN0022] Obrigatoriedade de ao menos um endereço de entrega
+ *  - [RN0023] Composição completa do registro de endereços
+ *  - [RN0026] Dados obrigatórios para cadastro de cliente
+ *  - [RNF0034] Edição e manutenção independente de dados e endereços
+ * ==============================================================================
  */
 
 // ⏱️ CONTROLE DE VELOCIDADE DA APRESENTAÇÃO
@@ -26,7 +35,7 @@ function generateRandomCPF(): string {
   return `${n[0]}${n[1]}${n[2]}.${n[3]}${n[4]}${n[5]}.${n[6]}${n[7]}${n[8]}-${n[9]}${n[10]}`
 }
 
-describe('Fluxo do Cliente - Loja Pública', () => {
+describe('Fluxo do Cliente - Loja Pública [DRS_LES_1_2026]', () => {
   const timestamp = Date.now()
   const clienteLoja = {
     name: `Cliente${timestamp.toString().slice(-4)}`,
@@ -42,9 +51,10 @@ describe('Fluxo do Cliente - Loja Pública', () => {
   }
 
   // ----------------------------------------------------------------------------
-  // CENÁRIO 1: Auto-cadastro completo com endereço de entrega
+  // CENÁRIO 1: Auto-cadastro completo com endereço de entrega (Create)
+  // Requisitos: [RF0021, RN0021, RN0022, RN0023, RN0026]
   // ----------------------------------------------------------------------------
-  it('1. Deve realizar o auto-cadastro do cliente e acessar Minha Conta', () => {
+  it('[RF0021 | RN0021 | RN0022 | RN0023 | RN0026] 1. Deve realizar o auto-cadastro do cliente e acessar Minha Conta', () => {
     cy.visit('/cadastro')
     cy.wait(PAUSE_TIME)
 
@@ -52,14 +62,14 @@ describe('Fluxo do Cliente - Loja Pública', () => {
     cy.contains('h1', 'Identificação & Cadastro').should('be.visible')
     cy.contains('Criar Nova Conta').should('be.visible')
 
-    // 1. Preenche Dados Pessoais
+    // 1. Preenche Dados Pessoais Obrigatórios (RN0026)
     cy.get('input[placeholder="Ex: João da Silva"]').type(clienteLoja.name, { delay: TYPING_SPEED })
     cy.get('input[placeholder="000.000.000-00"]').last().type(clienteLoja.cpf, { delay: TYPING_SPEED })
     cy.get('input[placeholder="(00) 00000-0000"]').type(clienteLoja.phone, { delay: TYPING_SPEED })
     cy.get('input[placeholder="seu.email@exemplo.com"]').type(clienteLoja.email, { delay: TYPING_SPEED })
     cy.wait(PAUSE_TIME)
 
-    // 2. Preenche Endereço de Entrega
+    // 2. Preenche Endereço de Entrega Completo (RN0022, RN0023)
     cy.get('input[placeholder="00000-000"]').first().type(clienteLoja.zipCode, { delay: TYPING_SPEED })
     cy.get('input[placeholder="Ex: Av. Paulista, Rua das Flores"]').first().type(clienteLoja.logradouro, { delay: TYPING_SPEED })
     cy.get('input[placeholder="Ex: 123"]').first().type(clienteLoja.numero, { delay: TYPING_SPEED })
@@ -87,9 +97,10 @@ describe('Fluxo do Cliente - Loja Pública', () => {
 
   // ----------------------------------------------------------------------------
   // CENÁRIO 2: Atualização de Dados Cadastrais pelo Próprio Cliente (Update)
+  // Requisitos: [RF0022, RNF0034]
   // ----------------------------------------------------------------------------
-    it('2. Deve atualizar as informações cadastrais do cliente em Minha Conta', () => {
-    // Busca o cliente recém-cadastrado no PostgreSQL pelo CPF para obter o ID real
+  it('[RF0022 | RNF0034] 2. Deve atualizar as informações cadastrais do cliente em Minha Conta', () => {
+    // Busca o cliente recém-cadastrado no PostgreSQL pelo CPF para carregar seu ID real
     cy.request('GET', `http://localhost:3001/api/clientes/cpf/${clienteLoja.cpf}`).then((response) => {
       const dbCustomer = response.body
       cy.window().then((win) => {
@@ -114,16 +125,16 @@ describe('Fluxo do Cliente - Loja Pública', () => {
     cy.contains('button', 'OK, Entendi').click()
     cy.wait(PAUSE_TIME)
 
-    // Valida que o telefone permaneceu atualizado
+    // Valida que o telefone permaneceu atualizado na tela
     cy.contains('label', 'Telefone').parent().find('input').should('have.value', '(11) 99999-8888')
     cy.wait(PAUSE_TIME)
   })
 
-
   // ----------------------------------------------------------------------------
   // CENÁRIO 3: Identificação rápida por CPF (Já sou cliente)
+  // Requisitos: [RF0024]
   // ----------------------------------------------------------------------------
-  it('3. Deve localizar a conta existente informando apenas o CPF', () => {
+  it('[RF0024] 3. Deve localizar a conta existente e carregar os dados atualizados informando apenas o CPF', () => {
     cy.visit('/cadastro')
     cy.wait(PAUSE_TIME)
 
@@ -139,6 +150,8 @@ describe('Fluxo do Cliente - Loja Pública', () => {
     cy.url().should('include', '/minha-conta')
     cy.contains('h1', 'Minha Conta').should('be.visible')
     cy.contains('label', 'Nome Completo').parent().find('input').should('have.value', clienteLoja.name)
+    // Valida que o telefone retornado do PostgreSQL é o atualizado
+    cy.contains('label', 'Telefone').parent().find('input').should('have.value', '(11) 99999-8888')
     cy.wait(PAUSE_TIME)
   })
 })
