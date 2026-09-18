@@ -5,12 +5,12 @@ import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
-import { User, MapPin, Save, Ticket, RefreshCcw, Truck, Plus, CheckCircle2, Package, Eye, Calendar } from 'lucide-react'
+import { User, MapPin, Save, Ticket, RefreshCcw, Truck, Plus, CheckCircle2, Package, Eye, Calendar, Pencil, Trash2 } from 'lucide-react'
 import { mockCoupons, mockExchanges, mockCustomers, mockOrders, type Coupon, type Exchange, type Customer, type Address, type Order } from '../../mock/mockData'
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
 import { Table } from '../../components/ui/Table'
 import { updateCustomer } from '../../services/customerService'
-import { getCustomerAddresses, createCustomerAddress } from '../../services/addressService'
+import { getCustomerAddresses, createCustomerAddress, updateCustomerAddress, deleteCustomerAddress } from '../../services/addressService'
 import { maskPhone, maskCEP, onlyNumbers } from '../../utils/inputMasks'
 
 const tipoResidenciaOptions = [
@@ -38,7 +38,7 @@ export const Account = () => {
   const [loggedCustomer, setLoggedCustomer] = useState<Customer | null>(null)
   const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'coupons' | 'exchanges'>('profile')
   const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [modalMessage, setModalMessage] = useState('') 
+  const [modalMessage, setModalMessage] = useState('')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -59,6 +59,11 @@ export const Account = () => {
   const [newZipCode, setNewZipCode] = useState('')
   const [newPais, setNewPais] = useState('Brasil')
   const [isSavingAddress, setIsSavingAddress] = useState(false)
+  // Estados para Edição e Exclusão de Endereços
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null)
+  const [addressToDelete, setAddressToDelete] = useState<Address | null>(null)
+
+
 
   // Pedidos, Cupons e Trocas
   const [orders, setOrders] = useState<Order[]>([])
@@ -182,7 +187,36 @@ export const Account = () => {
     }
   }
 
-  const handleAddNewAddress = async (e: React.FormEvent) => {
+  // Função para abrir o formulário em modo Edição com os dados preenchidos
+  const handleOpenEditAddress = (addr: Address) => {
+    setEditingAddressId(addr.id)
+    setTipoEndereco(addr.tipoEndereco as 'ENTREGA' | 'COBRANCA')
+    setTipoResidencia(addr.tipoResidencia || 'Casa')
+    setTipoLogradouro(addr.tipoLogradouro || 'Rua')
+    setNewAddress(addr.logradouro)
+    setNewNumero(addr.numero)
+    setNewBairro(addr.bairro)
+    setNewCity(addr.cidade)
+    setNewState(addr.estado)
+    setNewZipCode(addr.cep)
+    setNewPais(addr.pais || 'Brasil')
+    setShowNewAddressModal(true)
+  }
+
+  // Função para fechar e limpar o formulário de endereço
+  const handleCloseAddressForm = () => {
+    setEditingAddressId(null)
+    setNewAddress('')
+    setNewNumero('')
+    setNewBairro('')
+    setNewCity('')
+    setNewState('')
+    setNewZipCode('')
+    setShowNewAddressModal(false)
+  }
+
+  // Função para Salvar Endereço (Criação ou Atualização no PostgreSQL)
+  const handleSaveAddress = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!loggedCustomer?.id) return
 
@@ -207,21 +241,38 @@ export const Account = () => {
         observacoes: ''
       }
 
-      await createCustomerAddress(loggedCustomer.id, addressPayload)
-      alert('Endereço adicionado com sucesso!')
+      if (editingAddressId) {
+        // Atualiza endereço existente (PUT /api/clientes/:id/enderecos/:id)
+        await updateCustomerAddress(loggedCustomer.id, editingAddressId, addressPayload)
+        setModalMessage('Endereço atualizado com sucesso no banco de dados!')
+      } else {
+        // Cadastra novo endereço (POST /api/clientes/:id/enderecos)
+        await createCustomerAddress(loggedCustomer.id, addressPayload)
+        setModalMessage('Novo endereço cadastrado com sucesso no banco de dados!')
+      }
 
-      setNewAddress('')
-      setNewNumero('')
-      setNewBairro('')
-      setNewCity('')
-      setNewState('')
-      setNewZipCode('')
-      setShowNewAddressModal(false)
+      setShowSuccessModal(true)
+      handleCloseAddressForm()
       loadAddresses(loggedCustomer.id)
     } catch (err: any) {
-      alert(`Erro ao adicionar endereço: ${err.message}`)
+      alert(`Erro ao salvar endereço: ${err.message}`)
     } finally {
       setIsSavingAddress(false)
+    }
+  }
+
+  // Função para Excluir Endereço no PostgreSQL
+  const handleDeleteAddressConfirm = async () => {
+    if (!loggedCustomer?.id || !addressToDelete?.id) return
+
+    try {
+      await deleteCustomerAddress(loggedCustomer.id, addressToDelete.id)
+      setAddressToDelete(null)
+      setModalMessage('Endereço excluído com sucesso do banco de dados!')
+      setShowSuccessModal(true)
+      loadAddresses(loggedCustomer.id)
+    } catch (err: any) {
+      alert(`Erro ao excluir endereço: ${err.message}`)
     }
   }
 
@@ -313,41 +364,37 @@ export const Account = () => {
       <div className="flex border-b border-slate-800 gap-6 mb-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('profile')}
-          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 whitespace-nowrap ${
-            activeTab === 'profile'
+          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 whitespace-nowrap ${activeTab === 'profile'
               ? 'border-indigo-500 text-white font-black'
               : 'border-transparent text-slate-550 hover:text-slate-200'
-          }`}
+            }`}
         >
           Meus Dados
         </button>
         <button
           onClick={() => setActiveTab('orders')}
-          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 whitespace-nowrap ${
-            activeTab === 'orders'
+          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 whitespace-nowrap ${activeTab === 'orders'
               ? 'border-indigo-500 text-white font-black'
               : 'border-transparent text-slate-550 hover:text-slate-200'
-          }`}
+            }`}
         >
           Meus Pedidos
         </button>
         <button
           onClick={() => setActiveTab('coupons')}
-          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 whitespace-nowrap ${
-            activeTab === 'coupons'
+          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 whitespace-nowrap ${activeTab === 'coupons'
               ? 'border-indigo-500 text-white font-black'
               : 'border-transparent text-slate-550 hover:text-slate-200'
-          }`}
+            }`}
         >
           Meus Cupons
         </button>
         <button
           onClick={() => setActiveTab('exchanges')}
-          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 whitespace-nowrap ${
-            activeTab === 'exchanges'
+          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 whitespace-nowrap ${activeTab === 'exchanges'
               ? 'border-indigo-500 text-white font-black'
               : 'border-transparent text-slate-550 hover:text-slate-200'
-          }`}
+            }`}
         >
           Minhas Devoluções / Trocas
         </button>
@@ -417,12 +464,12 @@ export const Account = () => {
               </Button>
             </div>
 
-            {/* Formulário de Novo Endereço (Colapsável) */}
+            {/* Formulário de Novo/Editar Endereço (Colapsável) */}
             {showNewAddressModal && (
-              <form onSubmit={handleAddNewAddress} className="p-5 rounded-2xl bg-slate-950/60 border border-indigo-500/30 flex flex-col gap-4 animate-in fade-in duration-200">
+              <form onSubmit={handleSaveAddress} className="p-5 rounded-2xl bg-slate-950/60 border border-indigo-500/30 flex flex-col gap-4 animate-in fade-in duration-200">
                 <div className="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center gap-1.5">
                   <Plus className="w-3.5 h-3.5" />
-                  Cadastrar Novo Endereço
+                  {editingAddressId ? 'Editar Endereço' : 'Cadastrar Novo Endereço'}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -515,7 +562,7 @@ export const Account = () => {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => setShowNewAddressModal(false)}
+                    onClick={handleCloseAddressForm}
                   >
                     Cancelar
                   </Button>
@@ -526,11 +573,12 @@ export const Account = () => {
                     className="gap-1.5"
                   >
                     <Save className="w-3.5 h-3.5" />
-                    {isSavingAddress ? 'Salvando...' : 'Gravar Endereço'}
+                    {isSavingAddress ? 'Salvando...' : editingAddressId ? 'Salvar Alterações' : 'Gravar Endereço'}
                   </Button>
                 </div>
               </form>
             )}
+
 
             {/* Listagem de Endereços */}
             {loadingAddresses ? (
@@ -545,11 +593,10 @@ export const Account = () => {
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
                         <span
-                          className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${
-                            addr.tipoEndereco === 'ENTREGA'
+                          className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${addr.tipoEndereco === 'ENTREGA'
                               ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
                               : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-                          }`}
+                            }`}
                         >
                           {addr.tipoEndereco}
                         </span>
@@ -565,10 +612,26 @@ export const Account = () => {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1.5 text-xs text-emerald-400 shrink-0">
-                      <CheckCircle2 className="w-4 h-4" />
-                      Ativo
+                    {/* Ações de Edição e Exclusão do Endereço */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditAddress(addr)}
+                        className="p-2 rounded-xl text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 border border-slate-800 hover:border-indigo-500/30 transition-all cursor-pointer"
+                        title="Editar Endereço"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAddressToDelete(addr)}
+                        className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-slate-800 hover:border-rose-500/30 transition-all cursor-pointer"
+                        title="Excluir Endereço"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
+
                   </div>
                 ))}
               </div>
@@ -743,7 +806,7 @@ export const Account = () => {
           )}
         </div>
       )}
-            {/* MODAL DE SUCESSO DE ATUALIZAÇÃO DO PERFIL */}
+      {/* MODAL DE SUCESSO DE ATUALIZAÇÃO DO PERFIL */}
       <Modal
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
@@ -760,6 +823,37 @@ export const Account = () => {
         <div className="flex items-center gap-4 py-3">
           <CheckCircle2 className="w-10 h-10 text-emerald-400 flex-shrink-0" />
           <p className="text-slate-200 text-base">{modalMessage}</p>
+        </div>
+      </Modal>
+      {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO DE ENDEREÇO */}
+      <Modal
+        isOpen={!!addressToDelete}
+        onClose={() => setAddressToDelete(null)}
+        title="Confirmar Exclusão"
+        footer={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setAddressToDelete(null)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleDeleteAddressConfirm}
+              className="bg-rose-600 hover:bg-rose-500 text-white"
+            >
+              Excluir Endereço
+            </Button>
+          </div>
+        }
+      >
+        <div className="py-2 text-slate-300 text-sm">
+          Tem certeza que deseja excluir o endereço{' '}
+          <strong className="text-white">
+            {addressToDelete?.tipoLogradouro} {addressToDelete?.logradouro}, {addressToDelete?.numero}
+          </strong>
+          ? Esta ação removerá o registro permanentemente do banco de dados.
         </div>
       </Modal>
 
