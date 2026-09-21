@@ -8,7 +8,7 @@ export const Footer: React.FC = () => {
         {/* About Section */}
         <div className="flex flex-col gap-3 text-left">
           <span className="text-lg font-black bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-            AutoPeças
+            AutoParts
           </span>
           <p className="leading-relaxed text-slate-500">
             Protótipo de e-commerce de peças automotivas desenvolvido para a disciplina de Laboratório de Engenharia de Software.
@@ -44,7 +44,7 @@ export const Footer: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-6 mt-10 pt-6 border-t border-slate-900/60 flex flex-col sm:flex-row justify-between items-center gap-4 text-slate-500">
         <div>
-          © {new Date().getFullYear()} - AutoPeças.net. Desenvolvido para fins acadêmicos.
+          © {new Date().getFullYear()} - AutoParts Desenvolvido para fins acadêmicos.
         </div>
         <div className="flex gap-4">
           <span className="hover:text-slate-400 cursor-pointer">Termos de Uso</span>

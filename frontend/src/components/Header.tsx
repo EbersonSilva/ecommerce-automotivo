@@ -60,11 +60,11 @@ export const Header: React.FC = () => {
         <div className="flex items-center space-x-3 w-full md:w-auto justify-between md:justify-start">
           <Link to="/" className="flex items-center gap-2.5">
             <span className="text-2xl font-black bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent tracking-tight">
-              AutoPeças
+              AutoParts
             </span>
           </Link>
-          <Link 
-            to="/admin" 
+          <Link
+            to="/admin"
             className="md:hidden inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-550/20 text-xs font-bold text-indigo-400 hover:bg-indigo-500/20 transition-all"
           >
             <Shield className="w-3.5 h-3.5" />
@@ -98,7 +98,7 @@ export const Header: React.FC = () => {
                 <User className="w-4 h-4 text-indigo-400" />
                 <span className="text-xs font-bold max-w-[100px] truncate">{activeCustomer.name.split(' ')[0]}</span>
               </Link>
-              <button 
+              <button
                 onClick={() => {
                   if (confirm('Deseja realmente sair da sua conta?')) {
                     localStorage.removeItem('logged-customer')
@@ -128,8 +128,8 @@ export const Header: React.FC = () => {
             )}
           </Link>
 
-          <Link 
-            to="/admin" 
+          <Link
+            to="/admin"
             className="hidden md:inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-xs font-bold text-indigo-400 hover:bg-indigo-500/20 hover:text-indigo-300 transition-all cursor-pointer"
           >
             <Shield className="w-3.5 h-3.5" />

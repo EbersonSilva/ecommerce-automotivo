@@ -279,10 +279,10 @@ export const Register: React.FC = () => {
       {/* Cabeçalho da Página */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 pb-2 border-b border-slate-800">
         <div>
-          <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold uppercase tracking-wider mb-1">
+          {/* <div className="flex items-center gap-2 text-indigo-400 text-xs font-bold uppercase tracking-wider mb-1">
             <Sparkles className="w-4 h-4" />
             Central de Acesso
-          </div>
+          </div> */}
           <h1 className="text-3xl font-black text-white tracking-tight">Identificação & Cadastro</h1>
           <p className="text-xs text-slate-400 font-medium mt-1">
             {fromCheckout
