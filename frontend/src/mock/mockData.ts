@@ -96,13 +96,16 @@ export const mockCoupons: Coupon[] = [
 ]
 
 export interface CreditCard {
-  id: string
+  id: string | number
+  clienteId?: string | number
   holder: string
   number: string
   expiry: string
   cvv: string
   brand: string
+  preferencial?: boolean
 }
+
 
 export const mockCards: CreditCard[] = [
   {

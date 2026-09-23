@@ -56,3 +56,4 @@ app.listen(PORT, () => {
   console.log(`👥 Rota de Clientes: http://localhost:${PORT}/api/clientes`)
   console.log(`=======================================================`)
 })
+
