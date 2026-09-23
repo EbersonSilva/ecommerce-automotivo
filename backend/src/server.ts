@@ -4,6 +4,7 @@ import dotenv from 'dotenv'
 import customerRoutes from './routes/customerRoutes.js'
 import { query } from './database/db.js'
 import addressRoutes from './routes/addressRoutes.js'
+import cardRoutes from './routes/cardRoutes.js'
 
 // Carrega variáveis do arquivo .env
 dotenv.config()
@@ -45,6 +46,8 @@ app.get('/api/db-test', async (req, res) => {
 // REGISTRO DOS MÓDULOS DE ROTAS
 app.use('/api/clientes', customerRoutes)
 app.use('/api/clientes/:clienteId/enderecos', addressRoutes)
+app.use('/api/clientes/:clienteId/cartoes', cardRoutes)
+
 // INICIALIZAÇÃO DO SERVIDOR
 app.listen(PORT, () => {
   console.log(`=======================================================`)
