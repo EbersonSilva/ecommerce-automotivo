@@ -17,7 +17,8 @@ export const getCardsByCustomer = async (req: Request, res: Response): Promise<v
       SELECT 
         id,
         cliente_id AS "clienteId",
-        numero,
+        numero AS "number",
+        numero AS "numero",
         nome_impresso AS "holder",
         bandeira AS "brand",
         codigo_seguranca AS "cvv",
@@ -96,7 +97,8 @@ export const createCard = async (req: Request, res: Response): Promise<void> => 
       RETURNING 
         id,
         cliente_id AS "clienteId",
-        numero,
+        numero AS "number",
+        numero AS "numero",
         nome_impresso AS "holder",
         bandeira AS "brand",
         codigo_seguranca AS "cvv",
@@ -148,7 +150,8 @@ export const setPreferredCard = async (req: Request, res: Response): Promise<voi
       RETURNING 
         id,
         cliente_id AS "clienteId",
-        numero,
+        numero AS "number",
+        numero AS "numero",
         nome_impresso AS "holder",
         bandeira AS "brand",
         codigo_seguranca AS "cvv",

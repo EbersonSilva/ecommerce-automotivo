@@ -5,12 +5,13 @@ import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
-import { User, MapPin, Save, Ticket, RefreshCcw, Truck, Plus, CheckCircle2, Package, Eye, Calendar, Pencil, Trash2 } from 'lucide-react'
-import { mockCoupons, mockExchanges, mockCustomers, mockOrders, type Coupon, type Exchange, type Customer, type Address, type Order } from '../../mock/mockData'
+import { User, MapPin, Save, Ticket, RefreshCcw, Truck, Plus, CheckCircle2, Package, Eye, Calendar, Pencil, Trash2, CreditCard as CardIcon, Star, Shield} from 'lucide-react'
+import { mockCoupons, mockExchanges, mockCustomers, mockOrders, type Coupon, type Exchange, type Customer, type Address, type Order, type CreditCard  } from '../../mock/mockData'
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
 import { Table } from '../../components/ui/Table'
 import { updateCustomer } from '../../services/customerService'
 import { getCustomerAddresses, createCustomerAddress, updateCustomerAddress, deleteCustomerAddress } from '../../services/addressService'
+import { getCustomerCards, createCustomerCard, setPreferredCustomerCard, deleteCustomerCard } from '../../services/cardService'
 import { maskPhone, maskCPF, maskCEP, onlyNumbers } from '../../utils/inputMasks'
 
 const tipoResidenciaOptions = [
@@ -36,7 +37,7 @@ const tipoEnderecoOptions = [
 
 export const Account = () => {
   const [loggedCustomer, setLoggedCustomer] = useState<Customer | null>(null)
-  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'coupons' | 'exchanges'>('profile')
+  const [activeTab, setActiveTab] = useState<'profile' | 'cards' | 'orders' | 'coupons' | 'exchanges'>('profile')
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [modalMessage, setModalMessage] = useState('')
   const [name, setName] = useState('')
@@ -63,8 +64,33 @@ export const Account = () => {
   // Estados para Edição e Exclusão de Endereços
   const [editingAddressId, setEditingAddressId] = useState<string | number | null>(null)
   const [addressToDelete, setAddressToDelete] = useState<Address | null>(null)
+// 2. Adicione os estados de Cartões:
+  const [cards, setCards] = useState<CreditCard[]>([])
+  const [loadingCards, setLoadingCards] = useState(false)
+  const [showNewCardModal, setShowNewCardModal] = useState(false)
+  const [cardToDelete, setCardToDelete] = useState<CreditCard | null>(null)
+  // Formulário de Novo Cartão (RN0024 e RN0025)
+  const [newCardNumber, setNewCardNumber] = useState('')
+  const [newCardHolder, setNewCardHolder] = useState('')
+  const [newCardBrand, setNewCardBrand] = useState('Visa')
+  const [newCardCvv, setNewCardCvv] = useState('')
+  const [newCardExpiry, setNewCardExpiry] = useState('')
+  const [newCardPreferencial, setNewCardPreferencial] = useState(false)
+  const [isSavingCard, setIsSavingCard] = useState(false)
 
-
+  // Carrega cartões do PostgreSQL
+  const loadCards = async (customerId: string | number) => {
+    setLoadingCards(true)
+    try {
+      const data = await getCustomerCards(customerId)
+      setCards(data)
+    } catch (err) {
+      console.warn('⚠️ Não foi possível carregar cartões do PostgreSQL:', err)
+      setCards([])
+    } finally {
+      setLoadingCards(false)
+    }
+  }
 
 
   // Pedidos, Cupons e Trocas
@@ -138,6 +164,7 @@ export const Account = () => {
       setCpf(parsed?.cpf ? maskCPF(parsed.cpf) : '')
       if (parsed?.id) {
         loadAddresses(parsed.id)
+        loadCards(parsed.id)
       }
     }
     loadData(parsed)
@@ -341,6 +368,75 @@ export const Account = () => {
     }
   }
 
+    // Salvar Novo Cartão (RF0027, RN0024, RN0025)
+  const handleSaveCard = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!loggedCustomer?.id) return
+
+    if (!newCardNumber || !newCardHolder || !newCardBrand || !newCardCvv || !newCardExpiry) {
+      alert('Favor preencher todos os campos obrigatórios do cartão (RN0024).')
+      return
+    }
+
+    setIsSavingCard(true)
+    try {
+      await createCustomerCard(loggedCustomer.id, {
+        numero: newCardNumber,
+        holder: newCardHolder,
+        brand: newCardBrand,
+        cvv: newCardCvv,
+        expiry: newCardExpiry,
+        preferencial: newCardPreferencial
+      })
+
+      setModalMessage('Cartão de crédito cadastrado com sucesso no banco de dados!')
+      setShowSuccessModal(true)
+      setShowNewCardModal(false)
+
+      // Limpa os campos
+      setNewCardNumber('')
+      setNewCardHolder('')
+      setNewCardBrand('Visa')
+      setNewCardCvv('')
+      setNewCardExpiry('')
+      setNewCardPreferencial(false)
+
+      await loadCards(loggedCustomer.id)
+    } catch (err: any) {
+      alert(`Erro ao cadastrar cartão: ${err.message}`)
+    } finally {
+      setIsSavingCard(false)
+    }
+  }
+
+  // Definir Cartão como Preferencial (RF0027)
+  const handleSetPreferredCard = async (cardId: string | number) => {
+    if (!loggedCustomer?.id) return
+    try {
+      await setPreferredCustomerCard(loggedCustomer.id, cardId)
+      setModalMessage('Cartão preferencial atualizado com sucesso no banco de dados!')
+      setShowSuccessModal(true)
+      await loadCards(loggedCustomer.id)
+    } catch (err: any) {
+      alert(`Erro ao definir cartão preferencial: ${err.message}`)
+    }
+  }
+
+  // Excluir Cartão
+  const handleDeleteCardConfirm = async () => {
+    if (!loggedCustomer?.id || !cardToDelete?.id) return
+    try {
+      await deleteCustomerCard(loggedCustomer.id, cardToDelete.id)
+      setCardToDelete(null)
+      setModalMessage('Cartão excluído com sucesso do banco de dados!')
+      setShowSuccessModal(true)
+      await loadCards(loggedCustomer.id)
+    } catch (err: any) {
+      alert(`Erro ao excluir cartão: ${err.message}`)
+    }
+  }
+
+
   if (!loggedCustomer) {
     return (
       <div className="flex flex-col gap-6 text-left max-w-xl mx-auto w-full py-12">
@@ -389,6 +485,17 @@ export const Account = () => {
         >
           Meus Dados
         </button>
+        <button
+          onClick={() => setActiveTab('cards')}
+          className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 whitespace-nowrap flex items-center gap-2 ${activeTab === 'cards'
+              ? 'border-indigo-500 text-white font-black'
+              : 'border-transparent text-slate-550 hover:text-slate-200'
+            }`}
+        >
+          <CardIcon className="w-4 h-4" />
+          Meus Cartões ({cards.length})
+        </button>
+
         <button
           onClick={() => setActiveTab('orders')}
           className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 whitespace-nowrap ${activeTab === 'orders'
@@ -664,6 +771,115 @@ export const Account = () => {
         </div>
       )}
 
+            {/* TAB 2: Meus Cartões de Crédito (RF0027, RN0024, RN0025) */}
+      {activeTab === 'cards' && (
+        <div className="bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-6 mt-2 animate-fadeIn text-left">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-850">
+            <div>
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <CardIcon className="w-5 h-5 text-indigo-400" />
+                Cartões de Crédito Cadastrados
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Gerencie seus cartões de crédito e selecione o seu cartão preferencial para compras rápidas.
+              </p>
+            </div>
+            <Button onClick={() => setShowNewCardModal(true)} className="gap-2 shrink-0">
+              <Plus className="w-4 h-4" />
+              Novo Cartão
+            </Button>
+          </div>
+
+          {loadingCards ? (
+            <div className="text-center py-12 text-slate-400 text-sm">Carregando cartões do banco...</div>
+          ) : cards.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {cards.map((card) => (
+                <div
+                  key={card.id}
+                  className={`relative p-6 rounded-2xl border transition-all flex flex-col justify-between h-56 shadow-xl ${
+                    card.preferencial
+                      ? 'bg-gradient-to-br from-indigo-950/80 via-slate-900/90 to-purple-950/80 border-indigo-500/50 ring-1 ring-indigo-500/30'
+                      : 'bg-gradient-to-br from-slate-900/90 via-slate-950/90 to-slate-900/90 border-slate-800 hover:border-slate-700'
+                  }`}
+                >
+                  {/* Topo do Cartão: Chip e Bandeira */}
+                  <div className="flex justify-between items-start">
+                    <div className="w-11 h-8 rounded-md bg-gradient-to-br from-amber-300 via-amber-400 to-amber-500 shadow-sm border border-amber-200/50 flex items-center justify-center">
+                      <div className="w-7 h-5 border border-amber-700/30 rounded flex flex-col justify-around py-0.5 px-1">
+                        <div className="h-0.5 bg-amber-700/40 rounded-full" />
+                        <div className="h-0.5 bg-amber-700/40 rounded-full" />
+                      </div>
+                    </div>
+                    <span className="text-xs font-black uppercase px-2.5 py-1 rounded-md bg-white/10 text-white border border-white/10 tracking-wider">
+                      {card.brand}
+                    </span>
+                  </div>
+
+                  {/* Número Mascarado */}
+                  <div className="my-auto py-2">
+                    <span className="text-lg font-mono tracking-widest text-slate-100 font-bold block">
+                      •••• •••• •••• {(card.number || card.numero || '').slice(-4) || '••••'}
+                    </span>
+                  </div>
+
+                  {/* Rodapé do Cartão: Titular, Validade e Ações */}
+                  <div className="pt-2 border-t border-white/5 flex items-end justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase tracking-widest block font-medium">Titular</span>
+                      <span className="text-xs font-bold text-slate-200 uppercase truncate max-w-[140px] block">
+                        {card.holder}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 uppercase tracking-widest block font-medium">Validade</span>
+                      <span className="text-xs font-mono font-bold text-slate-200 block">{card.expiry}</span>
+                    </div>
+                  </div>
+
+                  {/* Barra de Status e Ações */}
+                  <div className="mt-3 pt-2 flex items-center justify-between">
+                    {card.preferencial ? (
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+                        <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                        Preferencial
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => handleSetPreferredCard(card.id)}
+                        className="text-[11px] font-semibold text-slate-400 hover:text-indigo-300 transition-colors flex items-center gap-1 cursor-pointer"
+                        title="Tornar este o cartão padrão para compras"
+                      >
+                        <Star className="w-3 h-3" />
+                        Tornar Preferencial
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => setCardToDelete(card)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                      title="Excluir Cartão"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-16 text-slate-500 flex flex-col items-center gap-3">
+              <CardIcon className="w-12 h-12 text-slate-700" />
+              <p className="text-sm">Você ainda não tem nenhum cartão de crédito salvo.</p>
+              <Button onClick={() => setShowNewCardModal(true)} variant="secondary" size="sm" className="gap-1.5 mt-2">
+                <Plus className="w-4 h-4" />
+                Adicionar meu primeiro cartão
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+
       {/* TAB 2: Orders List (NOVA ABA DE MEUS PEDIDOS) */}
       {activeTab === 'orders' && (
         <div className="bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-6 animate-fadeIn mt-2">
@@ -875,6 +1091,101 @@ export const Account = () => {
           ? Esta ação removerá o registro permanentemente do banco de dados.
         </div>
       </Modal>
+
+            {/* MODAL: Cadastrar Novo Cartão (RN0024 e RN0025) */}
+      <Modal isOpen={showNewCardModal} onClose={() => setShowNewCardModal(false)} title="Cadastrar Novo Cartão de Crédito">
+        <form onSubmit={handleSaveCard} className="space-y-4">
+          <Input
+            label="Número do Cartão"
+            placeholder="0000 0000 0000 0000"
+            value={newCardNumber}
+            onChange={(e) => setNewCardNumber(e.target.value)}
+            maxLength={19}
+            required
+          />
+
+          <Input
+            label="Nome Impresso no Cartão (Titular)"
+            placeholder="Ex: JOAO DA SILVA"
+            value={newCardHolder}
+            onChange={(e) => setNewCardHolder(e.target.value.toUpperCase())}
+            required
+          />
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Select
+              label="Bandeira"
+              value={newCardBrand}
+              onChange={(e) => setNewCardBrand(e.target.value)}
+              options={[
+                { value: 'Visa', label: 'Visa' },
+                { value: 'Mastercard', label: 'Mastercard' },
+                { value: 'Elo', label: 'Elo' },
+                { value: 'Hipercard', label: 'Hipercard' },
+                { value: 'American Express', label: 'American Express' }
+              ]}
+              required
+            />
+
+            <Input
+              label="Validade (MM/AA)"
+              placeholder="12/28"
+              value={newCardExpiry}
+              onChange={(e) => setNewCardExpiry(e.target.value)}
+              maxLength={5}
+              required
+            />
+
+            <Input
+              label="CVV"
+              placeholder="123"
+              type="password"
+              value={newCardCvv}
+              onChange={(e) => setNewCardCvv(e.target.value.replace(/\D/g, ''))}
+              maxLength={4}
+              required
+            />
+          </div>
+
+          <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-950/40 border border-slate-850 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={newCardPreferencial}
+              onChange={(e) => setNewCardPreferencial(e.target.checked)}
+              className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-900 border-slate-700"
+            />
+            <span className="text-xs text-slate-300 font-medium">Definir como cartão preferencial para compras</span>
+          </label>
+
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+            <Button type="button" variant="secondary" onClick={() => setShowNewCardModal(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={isSavingCard}>
+              {isSavingCard ? 'Salvando...' : 'Salvar Cartão no Banco'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* MODAL: Exclusão de Cartão */}
+      <Modal isOpen={!!cardToDelete} onClose={() => setCardToDelete(null)} title="Excluir Cartão de Crédito">
+        <div className="space-y-4 text-left">
+          <p className="text-sm text-slate-300">
+            Tem certeza que deseja remover o cartão com final{' '}
+            <strong className="text-white font-mono">{(cardToDelete?.number || cardToDelete?.numero || '').slice(-4)}</strong> ({cardToDelete?.brand})?
+          </p>
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+            <Button type="button" variant="secondary" onClick={() => setCardToDelete(null)}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={handleDeleteCardConfirm} className="bg-red-600 hover:bg-red-500 text-white">
+              Confirmar Exclusão
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
 
     </div>
   )
