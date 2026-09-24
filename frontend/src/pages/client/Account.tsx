@@ -5,14 +5,15 @@ import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
-import { User, MapPin, Save, Ticket, RefreshCcw, Truck, Plus, CheckCircle2, Package, Eye, Calendar, Pencil, Trash2, CreditCard as CardIcon, Star, Shield} from 'lucide-react'
-import { mockCoupons, mockExchanges, mockCustomers, mockOrders, type Coupon, type Exchange, type Customer, type Address, type Order, type CreditCard  } from '../../mock/mockData'
+import { User, MapPin, Save, Ticket, RefreshCcw, Truck, Plus, CheckCircle2, Package, Eye, Calendar, Pencil, Trash2, CreditCard as CardIcon, Star, Shield } from 'lucide-react'
+import { mockCoupons, mockExchanges, mockCustomers, mockOrders, type Coupon, type Exchange, type Customer, type Address, type Order, type CreditCard } from '../../mock/mockData'
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
 import { Table } from '../../components/ui/Table'
 import { updateCustomer } from '../../services/customerService'
 import { getCustomerAddresses, createCustomerAddress, updateCustomerAddress, deleteCustomerAddress } from '../../services/addressService'
 import { getCustomerCards, createCustomerCard, setPreferredCustomerCard, deleteCustomerCard } from '../../services/cardService'
-import { maskPhone, maskCPF, maskCEP, onlyNumbers } from '../../utils/inputMasks'
+import { maskPhone, maskCPF, maskCEP, onlyNumbers, maskCardNumber, maskCardExpiry, maskCVV } from '../../utils/inputMasks'
+
 
 const tipoResidenciaOptions = [
   { value: 'CASA', label: 'Casa' },
@@ -64,7 +65,7 @@ export const Account = () => {
   // Estados para Edição e Exclusão de Endereços
   const [editingAddressId, setEditingAddressId] = useState<string | number | null>(null)
   const [addressToDelete, setAddressToDelete] = useState<Address | null>(null)
-// 2. Adicione os estados de Cartões:
+  // 2. Adicione os estados de Cartões:
   const [cards, setCards] = useState<CreditCard[]>([])
   const [loadingCards, setLoadingCards] = useState(false)
   const [showNewCardModal, setShowNewCardModal] = useState(false)
@@ -289,7 +290,7 @@ export const Account = () => {
       setIsSavingAddress(false)
     }
   }
-    // Função para checar e abrir o modal de exclusão
+  // Função para checar e abrir o modal de exclusão
   const handleOpenDeleteAddress = (addr: Address) => {
     // Conta quantos endereços do mesmo tipo o cliente tem
     const sameTypeAddresses = addresses.filter((a) => a.tipoEndereco === addr.tipoEndereco)
@@ -368,7 +369,7 @@ export const Account = () => {
     }
   }
 
-    // Salvar Novo Cartão (RF0027, RN0024, RN0025)
+  // Salvar Novo Cartão (RF0027, RN0024, RN0025)
   const handleSaveCard = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!loggedCustomer?.id) return
@@ -479,8 +480,8 @@ export const Account = () => {
         <button
           onClick={() => setActiveTab('profile')}
           className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 whitespace-nowrap ${activeTab === 'profile'
-              ? 'border-indigo-500 text-white font-black'
-              : 'border-transparent text-slate-550 hover:text-slate-200'
+            ? 'border-indigo-500 text-white font-black'
+            : 'border-transparent text-slate-550 hover:text-slate-200'
             }`}
         >
           Meus Dados
@@ -488,8 +489,8 @@ export const Account = () => {
         <button
           onClick={() => setActiveTab('cards')}
           className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 whitespace-nowrap flex items-center gap-2 ${activeTab === 'cards'
-              ? 'border-indigo-500 text-white font-black'
-              : 'border-transparent text-slate-550 hover:text-slate-200'
+            ? 'border-indigo-500 text-white font-black'
+            : 'border-transparent text-slate-550 hover:text-slate-200'
             }`}
         >
           <CardIcon className="w-4 h-4" />
@@ -499,8 +500,8 @@ export const Account = () => {
         <button
           onClick={() => setActiveTab('orders')}
           className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 whitespace-nowrap ${activeTab === 'orders'
-              ? 'border-indigo-500 text-white font-black'
-              : 'border-transparent text-slate-550 hover:text-slate-200'
+            ? 'border-indigo-500 text-white font-black'
+            : 'border-transparent text-slate-550 hover:text-slate-200'
             }`}
         >
           Meus Pedidos
@@ -508,8 +509,8 @@ export const Account = () => {
         <button
           onClick={() => setActiveTab('coupons')}
           className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 whitespace-nowrap ${activeTab === 'coupons'
-              ? 'border-indigo-500 text-white font-black'
-              : 'border-transparent text-slate-550 hover:text-slate-200'
+            ? 'border-indigo-500 text-white font-black'
+            : 'border-transparent text-slate-550 hover:text-slate-200'
             }`}
         >
           Meus Cupons
@@ -517,8 +518,8 @@ export const Account = () => {
         <button
           onClick={() => setActiveTab('exchanges')}
           className={`pb-3 text-sm font-bold transition-all cursor-pointer border-b-2 whitespace-nowrap ${activeTab === 'exchanges'
-              ? 'border-indigo-500 text-white font-black'
-              : 'border-transparent text-slate-550 hover:text-slate-200'
+            ? 'border-indigo-500 text-white font-black'
+            : 'border-transparent text-slate-550 hover:text-slate-200'
             }`}
         >
           Minhas Devoluções / Trocas
@@ -719,8 +720,8 @@ export const Account = () => {
                       <div className="flex items-center gap-2">
                         <span
                           className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${addr.tipoEndereco === 'ENTREGA'
-                              ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
-                              : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                            ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                            : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
                             }`}
                         >
                           {addr.tipoEndereco}
@@ -771,7 +772,7 @@ export const Account = () => {
         </div>
       )}
 
-            {/* TAB 2: Meus Cartões de Crédito (RF0027, RN0024, RN0025) */}
+      {/* TAB 2: Meus Cartões de Crédito (RF0027, RN0024, RN0025) */}
       {activeTab === 'cards' && (
         <div className="bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-6 mt-2 animate-fadeIn text-left">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-850">
@@ -797,11 +798,10 @@ export const Account = () => {
               {cards.map((card) => (
                 <div
                   key={card.id}
-                  className={`relative p-6 rounded-2xl border transition-all flex flex-col justify-between h-56 shadow-xl ${
-                    card.preferencial
+                  className={`relative p-6 rounded-2xl border transition-all flex flex-col justify-between h-56 shadow-xl ${card.preferencial
                       ? 'bg-gradient-to-br from-indigo-950/80 via-slate-900/90 to-purple-950/80 border-indigo-500/50 ring-1 ring-indigo-500/30'
                       : 'bg-gradient-to-br from-slate-900/90 via-slate-950/90 to-slate-900/90 border-slate-800 hover:border-slate-700'
-                  }`}
+                    }`}
                 >
                   {/* Topo do Cartão: Chip e Bandeira */}
                   <div className="flex justify-between items-start">
@@ -819,7 +819,8 @@ export const Account = () => {
                   {/* Número Mascarado */}
                   <div className="my-auto py-2">
                     <span className="text-lg font-mono tracking-widest text-slate-100 font-bold block">
-                      •••• •••• •••• {(card.number || card.numero || '').slice(-4) || '••••'}
+                      •••• •••• •••• {(card.number || '').slice(-4) || '••••'}
+
                     </span>
                   </div>
 
@@ -1092,18 +1093,20 @@ export const Account = () => {
         </div>
       </Modal>
 
-            {/* MODAL: Cadastrar Novo Cartão (RN0024 e RN0025) */}
+      {/* MODAL: Cadastrar Novo Cartão (RN0024 e RN0025) */}
       <Modal isOpen={showNewCardModal} onClose={() => setShowNewCardModal(false)} title="Cadastrar Novo Cartão de Crédito">
         <form onSubmit={handleSaveCard} className="space-y-4">
+          {/* Número do Cartão com máscara */}
           <Input
             label="Número do Cartão"
             placeholder="0000 0000 0000 0000"
             value={newCardNumber}
-            onChange={(e) => setNewCardNumber(e.target.value)}
+            onChange={(e) => setNewCardNumber(maskCardNumber(e.target.value))}
             maxLength={19}
             required
           />
 
+          {/* Nome do Titular (sempre em maiúsculas) */}
           <Input
             label="Nome Impresso no Cartão (Titular)"
             placeholder="Ex: JOAO DA SILVA"
@@ -1127,24 +1130,27 @@ export const Account = () => {
               required
             />
 
+            {/* Validade com máscara MM/AA */}
             <Input
               label="Validade (MM/AA)"
               placeholder="12/28"
               value={newCardExpiry}
-              onChange={(e) => setNewCardExpiry(e.target.value)}
+              onChange={(e) => setNewCardExpiry(maskCardExpiry(e.target.value))}
               maxLength={5}
               required
             />
 
+            {/* CVV numérico */}
             <Input
               label="CVV"
               placeholder="123"
               type="password"
               value={newCardCvv}
-              onChange={(e) => setNewCardCvv(e.target.value.replace(/\D/g, ''))}
+              onChange={(e) => setNewCardCvv(maskCVV(e.target.value))}
               maxLength={4}
               required
             />
+
           </div>
 
           <label className="flex items-center gap-2.5 p-3 rounded-xl bg-slate-950/40 border border-slate-850 cursor-pointer">
@@ -1173,7 +1179,7 @@ export const Account = () => {
         <div className="space-y-4 text-left">
           <p className="text-sm text-slate-300">
             Tem certeza que deseja remover o cartão com final{' '}
-            <strong className="text-white font-mono">{(cardToDelete?.number || cardToDelete?.numero || '').slice(-4)}</strong> ({cardToDelete?.brand})?
+            <strong className="text-white font-mono">{(cardToDelete?.number || '').slice(-4)}</strong> ({cardToDelete?.brand})?
           </p>
           <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
             <Button type="button" variant="secondary" onClick={() => setCardToDelete(null)}>

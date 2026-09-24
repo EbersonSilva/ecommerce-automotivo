@@ -30,3 +30,22 @@ export function maskCEP(value: string){
     return numbers
     .replace(/(\d{5})(\d)/, '$1-$2')
 }
+
+// Adiciona máscara de Cartão: 0000 0000 0000 0000
+export function maskCardNumber(value: string) {
+  const numbers = onlyNumbers(value).slice(0, 16)
+  return numbers.replace(/(\d{4})(?=\d)/g, '$1 ')
+}
+
+// Adiciona máscara de Validade: MM/AA
+export function maskCardExpiry(value: string) {
+  const numbers = onlyNumbers(value).slice(0, 4)
+  if (numbers.length >= 3) {
+    return numbers.replace(/(\d{2})(\d{1,2})/, '$1/$2')
+  }
+  return numbers
+}
+// Limita CVV a apenas números (máximo 4 dígitos)
+export function maskCVV(value: string) {
+  return onlyNumbers(value).slice(0, 4)
+}
