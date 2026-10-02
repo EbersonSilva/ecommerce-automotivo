@@ -7,7 +7,9 @@ import { Select } from '../../components/ui/Select'
 import { Check, CreditCard as CardIcon, MapPin, ClipboardCheck, PartyPopper, Ticket, Plus, CheckCircle2 } from 'lucide-react'
 import { mockCoupons, mockCards, type Coupon, type CreditCard, type Address } from '../../mock/mockData'
 import { getCustomerAddresses, createCustomerAddress } from '../../services/addressService'
-import { maskCEP, onlyNumbers } from '../../utils/inputMasks'
+import { getCustomerCards, createCustomerCard } from '../../services/cardService'
+import { maskCEP, maskCardNumber, maskCardExpiry, maskCVV, onlyNumbers } from '../../utils/inputMasks'
+
 
 const tipoResidenciaOptions = [
   { value: 'CASA', label: 'Casa' },
@@ -23,6 +25,15 @@ const tipoLogradouroOptions = [
   { value: 'Travessa', label: 'Travessa' },
   { value: 'Largo', label: 'Largo' },
   { value: 'Beco', label: 'Beco' },
+]
+
+
+const bandeirasOptions = [
+  { value: 'Visa', label: 'Visa'},
+  { value: 'Mastercard', label: 'Mastercard'},
+  { value: 'Elo', label: 'Elo'},
+  { value: 'Hipercard', label: 'Hipercard'},
+  { value: 'American Express', label: 'American Express'},
 ]
 
 interface CartItem {
@@ -79,26 +90,31 @@ export const Checkout = () => {
   // Step 2: Payment Selection State
   const [paymentMethod, setPaymentMethod] = useState<'Pix' | 'Boleto Bancário' | 'Cartão de Crédito' | 'Múltiplos Cartões'>('Pix')
 
-  // Cards Database (Saved cards + Mock cards)
+   // Cards Database (PostgreSQL)
   const [savedCardsList, setSavedCardsList] = useState<CreditCard[]>([])
+  const [loadingCards, setLoadingCards] = useState(false)
 
   // Card 1 state
-  const [selectedCardId1, setSelectedCardId1] = useState<string>('new')
+  const [selectedCardId1, setSelectedCardId1] = useState<string | number>('new')
   const [cardHolder1, setCardHolder1] = useState('')
   const [cardNumber1, setCardNumber1] = useState('')
+  const [cardBrand1, setCardBrand1] = useState('Visa')
   const [cardExpiry1, setCardExpiry1] = useState('')
   const [cardCvv1, setCardCvv1] = useState('')
   const [saveCard1, setSaveCard1] = useState(false)
   const [cardAmount1, setCardAmount1] = useState<number>(0)
 
   // Card 2 state (for multiple cards)
-  const [selectedCardId2, setSelectedCardId2] = useState<string>('new')
+  const [selectedCardId2, setSelectedCardId2] = useState<string | number>('new')
   const [cardHolder2, setCardHolder2] = useState('')
   const [cardNumber2, setCardNumber2] = useState('')
+  const [cardBrand2, setCardBrand2] = useState('Visa')
   const [cardExpiry2, setCardExpiry2] = useState('')
   const [cardCvv2, setCardCvv2] = useState('')
   const [saveCard2, setSaveCard2] = useState(false)
   const [cardAmount2, setCardAmount2] = useState<number>(0)
+
+
 
   const [createdOrderCode, setCreatedOrderCode] = useState('')
 
@@ -126,6 +142,30 @@ export const Checkout = () => {
     }
   }
 
+    // Carrega Cartões do PostgreSQL e pré-seleciona o preferencial
+  const loadCards = async (customerId: string | number) => {
+    setLoadingCards(true)
+    try {
+      const data = await getCustomerCards(customerId)
+      setSavedCardsList(data)
+      if (data.length > 0) {
+        // Pré-seleciona o cartão preferencial ou o primeiro da lista
+        const preferred = data.find((c) => c.preferencial) || data[0]
+        setSelectedCardId1(preferred.id)
+      } else {
+        setSelectedCardId1('new')
+      }
+    } catch (err) {
+      console.warn('⚠️ Não foi possível carregar cartões do PostgreSQL:', err)
+      setSavedCardsList([])
+      setSelectedCardId1('new')
+    } finally {
+      setLoadingCards(false)
+    }
+  }
+
+  
+
   // Load Initial Data
   useEffect(() => {
     try {
@@ -134,14 +174,14 @@ export const Checkout = () => {
       if (savedCart) {
         setCartItems(JSON.parse(savedCart))
       }
-
-      // Logged user address from PostgreSQL
+            // Logged user address & cards from PostgreSQL
       const savedCustomer = localStorage.getItem('logged-customer')
       let customer: any = null
       if (savedCustomer) {
         customer = JSON.parse(savedCustomer)
         if (customer?.id) {
           loadAddresses(customer.id)
+          loadCards(customer.id)
         }
       }
 
@@ -152,16 +192,15 @@ export const Checkout = () => {
       const filteredCoupons = customer
         ? allCoupons.filter((c: Coupon) => c.status === 'Ativo' && c.customerId === customer.id)
         : allCoupons.filter((c: Coupon) => c.status === 'Ativo')
+
       setAvailableCoupons(filteredCoupons)
 
-      // Cards
-      const savedCards = localStorage.getItem('custom-cards')
-      const customCards = savedCards ? JSON.parse(savedCards) : []
-      setSavedCardsList([...customCards, ...mockCards])
     } catch (err) {
       console.error(err)
     }
   }, [])
+
+  
 
   // Totals calculations
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0)
@@ -187,19 +226,21 @@ export const Checkout = () => {
     }
   }, [remainingTotal, paymentMethod, step])
 
-  // Handle Card 1 preloaded selection
+    // Handle Card 1 preloaded selection
   useEffect(() => {
     if (selectedCardId1 !== 'new') {
-      const card = savedCardsList.find(c => c.id === selectedCardId1)
+      const card = savedCardsList.find(c => String(c.id) === String(selectedCardId1))
       if (card) {
-        setCardHolder1(card.holder)
-        setCardNumber1(card.number)
-        setCardExpiry1(card.expiry)
-        setCardCvv1(card.cvv)
+        setCardHolder1(card.holder || '')
+        setCardNumber1(card.number || '')
+        setCardBrand1(card.brand || 'Visa')
+        setCardExpiry1(card.expiry || '')
+        setCardCvv1(card.cvv || '')
       }
     } else {
       setCardHolder1('')
       setCardNumber1('')
+      setCardBrand1('Visa')
       setCardExpiry1('')
       setCardCvv1('')
     }
@@ -208,20 +249,23 @@ export const Checkout = () => {
   // Handle Card 2 preloaded selection
   useEffect(() => {
     if (selectedCardId2 !== 'new') {
-      const card = savedCardsList.find(c => c.id === selectedCardId2)
+      const card = savedCardsList.find(c => String(c.id) === String(selectedCardId2))
       if (card) {
-        setCardHolder2(card.holder)
-        setCardNumber2(card.number)
-        setCardExpiry2(card.expiry)
-        setCardCvv2(card.cvv)
+        setCardHolder2(card.holder || '')
+        setCardNumber2(card.number || '')
+        setCardBrand2(card.brand || 'Visa')
+        setCardExpiry2(card.expiry || '')
+        setCardCvv2(card.cvv || '')
       }
     } else {
       setCardHolder2('')
       setCardNumber2('')
+      setCardBrand2('Visa')
       setCardExpiry2('')
       setCardCvv2('')
     }
   }, [selectedCardId2, savedCardsList])
+
 
   /**
    * FUNÇÃO: Validação e Avanço entre Etapas
@@ -355,14 +399,17 @@ export const Checkout = () => {
     })
   }
 
-  /**
+    /**
    * FUNÇÃO: Finalizar Pedido
    */
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     const newOrderId = `PED-${Math.floor(1000 + Math.random() * 9000)}`
     setCreatedOrderCode(newOrderId)
 
     try {
+      const loggedCustomerStr = localStorage.getItem('logged-customer')
+      const currentCust = loggedCustomerStr ? JSON.parse(loggedCustomerStr) : null
+
       // 1. Marca cupons como Utilizados
       const savedCoupons = localStorage.getItem('custom-coupons')
       const couponsList: Coupon[] = savedCoupons ? JSON.parse(savedCoupons) : []
@@ -384,49 +431,56 @@ export const Checkout = () => {
       })
       localStorage.setItem('custom-coupons', JSON.stringify(updatedCoupons))
 
-      // 2. Salva novos cartões se marcado
-      const savedCards = localStorage.getItem('custom-cards')
-      const cardsList: CreditCard[] = savedCards ? JSON.parse(savedCards) : []
+      // 2. Salva novos cartões no PostgreSQL (se marcado pelo cliente)
+      if (currentCust?.id) {
+        if (paymentMethod === 'Cartão de Crédito' && selectedCardId1 === 'new' && saveCard1) {
+          try {
+            await createCustomerCard(currentCust.id, {
+              numero: cardNumber1,
+              holder: cardHolder1,
+              brand: cardBrand1,
+              cvv: cardCvv1,
+              expiry: cardExpiry1,
+              preferencial: savedCardsList.length === 0
+            })
+          } catch (err) {
+            console.warn('⚠️ Erro ao salvar Cartão 1 no banco:', err)
+          }
+        }
 
-      if (paymentMethod === 'Cartão de Crédito' && selectedCardId1 === 'new' && saveCard1) {
-        const brand = cardNumber1.startsWith('4') ? 'Visa' : 'Mastercard'
-        cardsList.push({
-          id: `CARD-${Math.floor(1000 + Math.random() * 9000)}`,
-          holder: cardHolder1,
-          number: `**** **** **** ${cardNumber1.slice(-4) || '9999'}`,
-          expiry: cardExpiry1,
-          cvv: cardCvv1,
-          brand
-        })
+        if (paymentMethod === 'Múltiplos Cartões') {
+          if (selectedCardId1 === 'new' && saveCard1) {
+            try {
+              await createCustomerCard(currentCust.id, {
+                numero: cardNumber1,
+                holder: cardHolder1,
+                brand: cardBrand1,
+                cvv: cardCvv1,
+                expiry: cardExpiry1,
+                preferencial: savedCardsList.length === 0
+              })
+            } catch (err) {
+              console.warn('⚠️ Erro ao salvar Cartão 1 no banco:', err)
+            }
+          }
+          if (selectedCardId2 === 'new' && saveCard2) {
+            try {
+              await createCustomerCard(currentCust.id, {
+                numero: cardNumber2,
+                holder: cardHolder2,
+                brand: cardBrand2,
+                cvv: cardCvv2,
+                expiry: cardExpiry2,
+                preferencial: false
+              })
+            } catch (err) {
+              console.warn('⚠️ Erro ao salvar Cartão 2 no banco:', err)
+            }
+          }
+        }
       }
 
-      if (paymentMethod === 'Múltiplos Cartões') {
-        if (selectedCardId1 === 'new' && saveCard1) {
-          const brand = cardNumber1.startsWith('4') ? 'Visa' : 'Mastercard'
-          cardsList.push({
-            id: `CARD-${Math.floor(1000 + Math.random() * 9000)}`,
-            holder: cardHolder1,
-            number: `**** **** **** ${cardNumber1.slice(-4) || '9999'}`,
-            expiry: cardExpiry1,
-            cvv: cardCvv1,
-            brand
-          })
-        }
-        if (selectedCardId2 === 'new' && saveCard2) {
-          const brand = cardNumber2.startsWith('4') ? 'Visa' : 'Mastercard'
-          cardsList.push({
-            id: `CARD-${Math.floor(1000 + Math.random() * 9000)}`,
-            holder: cardHolder2,
-            number: `**** **** **** ${cardNumber2.slice(-4) || '9999'}`,
-            expiry: cardExpiry2,
-            cvv: cardCvv2,
-            brand
-          })
-        }
-      }
-      localStorage.setItem('custom-cards', JSON.stringify(cardsList))
-
-      // 3. Salva novo pedido
+      // 3. Salva novo pedido no localStorage
       const savedOrders = localStorage.getItem('custom-orders')
       const ordersList = savedOrders ? JSON.parse(savedOrders) : []
 
@@ -437,9 +491,6 @@ export const Checkout = () => {
       if (selectedCouponIds.length > 0) {
         payMethodDescription += ` + ${selectedCouponIds.length} Cupom(ns) (Desconto: R$ ${couponsDiscount.toFixed(2)})`
       }
-
-      const loggedCustomerStr = localStorage.getItem('logged-customer')
-      const currentCust = loggedCustomerStr ? JSON.parse(loggedCustomerStr) : null
 
       const newOrder = {
         id: newOrderId,
@@ -471,6 +522,7 @@ export const Checkout = () => {
       alert('Falha ao concluir o pedido.')
     }
   }
+
 
   // Steps indicators
   const stepsHeader = [
@@ -999,7 +1051,7 @@ export const Checkout = () => {
 
               {remainingTotal > 0 && (
                 <>
-                  {/* Option: One Credit Card */}
+                                {/* Option: One Credit Card */}
                   {paymentMethod === 'Cartão de Crédito' && (
                     <div className="flex flex-col gap-4 border-t border-slate-850/50 pt-4 animate-fadeIn">
                       <Select
@@ -1007,37 +1059,53 @@ export const Checkout = () => {
                         value={selectedCardId1}
                         onChange={(e) => setSelectedCardId1(e.target.value)}
                         options={[
-                          { value: 'new', label: 'Cadastrar outro Cartão' },
-                          ...savedCardsList.map(c => ({ value: c.id, label: `${c.brand} final ${c.number.slice(-4)} (${c.holder})` }))
+                          ...savedCardsList.map(c => ({ 
+                            value: c.id, 
+                            label: `${c.preferencial ? '⭐ [Preferencial] ' : ''}${c.brand} final ${(c.number || '').slice(-4)} (${c.holder})` 
+                          })),
+                          { value: 'new', label: '+ Cadastrar outro Cartão' }
                         ]}
                       />
+
+                      {selectedCardId1 === 'new' && (
+                        <Select
+                          label="Bandeira do Cartão *"
+                          value={cardBrand1}
+                          onChange={(e) => setCardBrand1(e.target.value)}
+                          options={bandeirasOptions}
+                        />
+                      )}
+
                       <Input
                         label="Nome no Titular *"
                         value={cardHolder1}
-                        onChange={(e) => setCardHolder1(e.target.value)}
-                        placeholder="Nome completo do titular"
+                        onChange={(e) => setCardHolder1(e.target.value.toUpperCase())}
+                        placeholder="NOME COMO IMPRESSO NO CARTÃO"
                         disabled={selectedCardId1 !== 'new'}
                       />
                       <Input
                         label="Número do Cartão *"
                         value={cardNumber1}
-                        onChange={(e) => setCardNumber1(e.target.value)}
+                        onChange={(e) => setCardNumber1(maskCardNumber(e.target.value))}
                         placeholder="0000 0000 0000 0000"
+                        maxLength={19}
                         disabled={selectedCardId1 !== 'new'}
                       />
                       <div className="grid grid-cols-2 gap-4">
                         <Input
                           label="Vencimento *"
                           value={cardExpiry1}
-                          onChange={(e) => setCardExpiry1(e.target.value)}
+                          onChange={(e) => setCardExpiry1(maskCardExpiry(e.target.value))}
                           placeholder="MM/AA"
+                          maxLength={5}
                           disabled={selectedCardId1 !== 'new'}
                         />
                         <Input
                           label="CVV *"
                           value={cardCvv1}
-                          onChange={(e) => setCardCvv1(e.target.value)}
+                          onChange={(e) => setCardCvv1(maskCVV(e.target.value))}
                           placeholder="123"
+                          maxLength={4}
                           disabled={selectedCardId1 !== 'new'}
                         />
                       </div>
@@ -1047,7 +1115,7 @@ export const Checkout = () => {
                             type="checkbox"
                             checked={saveCard1}
                             onChange={(e) => setSaveCard1(e.target.checked)}
-                            className="rounded border-slate-800 bg-slate-950 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-slate-900"
+                            className="rounded border-slate-800 bg-slate-950 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-slate-900 cursor-pointer"
                           />
                           <span className="text-[11px] font-bold text-slate-350">Salvar este cartão na minha conta para compras futuras</span>
                         </label>
@@ -1055,7 +1123,9 @@ export const Checkout = () => {
                     </div>
                   )}
 
-                  {/* Option: Multiple Credit Cards */}
+
+
+                                   {/* Option: Multiple Credit Cards */}
                   {paymentMethod === 'Múltiplos Cartões' && (
                     <div className="space-y-6 border-t border-slate-850/50 pt-4 animate-fadeIn">
 
@@ -1064,12 +1134,15 @@ export const Checkout = () => {
                         <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-1">Cartão 1</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <Select
-                            label="Selecionar Cartão"
+                            label="Selecionar Cartão 1"
                             value={selectedCardId1}
                             onChange={(e) => setSelectedCardId1(e.target.value)}
                             options={[
-                              { value: 'new', label: 'Cadastrar outro Cartão' },
-                              ...savedCardsList.map(c => ({ value: c.id, label: `${c.brand} final ${c.number.slice(-4)} (${c.holder})` }))
+                              ...savedCardsList.map(c => ({ 
+                                value: c.id, 
+                                label: `${c.preferencial ? '⭐ [Preferencial] ' : ''}${c.brand} final ${(c.number || '').slice(-4)} (${c.holder})` 
+                              })),
+                              { value: 'new', label: '+ Cadastrar outro Cartão' }
                             ]}
                           />
                           <div className="flex flex-col gap-1.5 text-left">
@@ -1084,33 +1157,46 @@ export const Checkout = () => {
                             />
                           </div>
                         </div>
+
+                        {selectedCardId1 === 'new' && (
+                          <Select
+                            label="Bandeira do Cartão 1 *"
+                            value={cardBrand1}
+                            onChange={(e) => setCardBrand1(e.target.value)}
+                            options={bandeirasOptions}
+                          />
+                        )}
+
                         <Input
                           label="Nome Titular Cartão 1 *"
                           value={cardHolder1}
-                          onChange={(e) => setCardHolder1(e.target.value)}
-                          placeholder="Nome no cartão"
+                          onChange={(e) => setCardHolder1(e.target.value.toUpperCase())}
+                          placeholder="NOME COMO IMPRESSO NO CARTÃO"
                           disabled={selectedCardId1 !== 'new'}
                         />
                         <Input
                           label="Número do Cartão 1 *"
                           value={cardNumber1}
-                          onChange={(e) => setCardNumber1(e.target.value)}
+                          onChange={(e) => setCardNumber1(maskCardNumber(e.target.value))}
                           placeholder="0000 0000 0000 0000"
+                          maxLength={19}
                           disabled={selectedCardId1 !== 'new'}
                         />
                         <div className="grid grid-cols-2 gap-4">
                           <Input
                             label="Vencimento *"
                             value={cardExpiry1}
-                            onChange={(e) => setCardExpiry1(e.target.value)}
+                            onChange={(e) => setCardExpiry1(maskCardExpiry(e.target.value))}
                             placeholder="MM/AA"
+                            maxLength={5}
                             disabled={selectedCardId1 !== 'new'}
                           />
                           <Input
                             label="CVV *"
                             value={cardCvv1}
-                            onChange={(e) => setCardCvv1(e.target.value)}
+                            onChange={(e) => setCardCvv1(maskCVV(e.target.value))}
                             placeholder="123"
+                            maxLength={4}
                             disabled={selectedCardId1 !== 'new'}
                           />
                         </div>
@@ -1120,9 +1206,9 @@ export const Checkout = () => {
                               type="checkbox"
                               checked={saveCard1}
                               onChange={(e) => setSaveCard1(e.target.checked)}
-                              className="rounded border-slate-800 bg-slate-950 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-slate-900"
+                              className="rounded border-slate-800 bg-slate-950 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-slate-900 cursor-pointer"
                             />
-                            <span className="text-[11px] font-bold text-slate-350">Salvar este cartão</span>
+                            <span className="text-[11px] font-bold text-slate-350">Salvar este cartão na minha conta para compras futuras</span>
                           </label>
                         )}
                       </div>
@@ -1132,12 +1218,15 @@ export const Checkout = () => {
                         <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-1">Cartão 2</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <Select
-                            label="Selecionar Cartão"
+                            label="Selecionar Cartão 2"
                             value={selectedCardId2}
                             onChange={(e) => setSelectedCardId2(e.target.value)}
                             options={[
-                              { value: 'new', label: 'Cadastrar outro Cartão' },
-                              ...savedCardsList.map(c => ({ value: c.id, label: `${c.brand} final ${c.number.slice(-4)} (${c.holder})` }))
+                              ...savedCardsList.map(c => ({ 
+                                value: c.id, 
+                                label: `${c.preferencial ? '⭐ [Preferencial] ' : ''}${c.brand} final ${(c.number || '').slice(-4)} (${c.holder})` 
+                              })),
+                              { value: 'new', label: '+ Cadastrar outro Cartão' }
                             ]}
                           />
                           <div className="flex flex-col gap-1.5 text-left">
@@ -1152,33 +1241,46 @@ export const Checkout = () => {
                             />
                           </div>
                         </div>
+
+                        {selectedCardId2 === 'new' && (
+                          <Select
+                            label="Bandeira do Cartão 2 *"
+                            value={cardBrand2}
+                            onChange={(e) => setCardBrand2(e.target.value)}
+                            options={bandeirasOptions}
+                          />
+                        )}
+
                         <Input
                           label="Nome Titular Cartão 2 *"
                           value={cardHolder2}
-                          onChange={(e) => setCardHolder2(e.target.value)}
-                          placeholder="Nome no cartão"
+                          onChange={(e) => setCardHolder2(e.target.value.toUpperCase())}
+                          placeholder="NOME COMO IMPRESSO NO CARTÃO"
                           disabled={selectedCardId2 !== 'new'}
                         />
                         <Input
                           label="Número do Cartão 2 *"
                           value={cardNumber2}
-                          onChange={(e) => setCardNumber2(e.target.value)}
+                          onChange={(e) => setCardNumber2(maskCardNumber(e.target.value))}
                           placeholder="0000 0000 0000 0000"
+                          maxLength={19}
                           disabled={selectedCardId2 !== 'new'}
                         />
                         <div className="grid grid-cols-2 gap-4">
                           <Input
                             label="Vencimento *"
                             value={cardExpiry2}
-                            onChange={(e) => setCardExpiry2(e.target.value)}
+                            onChange={(e) => setCardExpiry2(maskCardExpiry(e.target.value))}
                             placeholder="MM/AA"
+                            maxLength={5}
                             disabled={selectedCardId2 !== 'new'}
                           />
                           <Input
                             label="CVV *"
                             value={cardCvv2}
-                            onChange={(e) => setCardCvv2(e.target.value)}
+                            onChange={(e) => setCardCvv2(maskCVV(e.target.value))}
                             placeholder="123"
+                            maxLength={4}
                             disabled={selectedCardId2 !== 'new'}
                           />
                         </div>
@@ -1188,9 +1290,9 @@ export const Checkout = () => {
                               type="checkbox"
                               checked={saveCard2}
                               onChange={(e) => setSaveCard2(e.target.checked)}
-                              className="rounded border-slate-800 bg-slate-950 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-slate-900"
+                              className="rounded border-slate-800 bg-slate-950 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-slate-900 cursor-pointer"
                             />
-                            <span className="text-[11px] font-bold text-slate-350">Salvar este cartão</span>
+                            <span className="text-[11px] font-bold text-slate-350">Salvar este cartão na minha conta para compras futuras</span>
                           </label>
                         )}
                       </div>
@@ -1214,6 +1316,7 @@ export const Checkout = () => {
 
                     </div>
                   )}
+
 
                   {/* Option: Pix */}
                   {paymentMethod === 'Pix' && (
