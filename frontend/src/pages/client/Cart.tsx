@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Breadcrumb } from '../../components/ui/Breadcrumb'
 import { Button } from '../../components/ui/Button'
 import { Trash2, ShoppingBag, ArrowRight, ArrowLeft } from 'lucide-react'
+import { mockProducts } from '../../mock/mockData'  
 
 interface CartItem {
   productId: string
@@ -37,16 +38,27 @@ export const Cart: React.FC = () => {
     window.dispatchEvent(new Event('cart-updated'))
   }
 
-  const handleUpdateQuantity = (productId: string, delta: number) => {
+    const handleUpdateQuantity = (productId: string, delta: number) => {
+    const product = mockProducts.find((p) => String(p.id) === String(productId))
+    const maxStock = product ? product.stock : 99
+
     const updated = cartItems.map((item) => {
       if (item.productId === productId) {
         const nextQty = item.quantity + delta
+
+        // RN0031: Não permitir quantidade superior ao estoque disponível
+        if (nextQty > maxStock) {
+          alert(`RN0031: Quantidade máxima disponível em estoque para "${item.name}" é de ${maxStock} unidade(s).`)
+          return item
+        }
+
         return { ...item, quantity: Math.max(nextQty, 1) }
       }
       return item
     })
     saveCart(updated)
   }
+
 
   const handleRemoveItem = (productId: string) => {
     const updated = cartItems.filter((item) => item.productId !== productId)

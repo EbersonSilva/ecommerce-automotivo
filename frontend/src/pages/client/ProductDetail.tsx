@@ -33,7 +33,7 @@ export const ProductDetail = () => {
   const isOutOfStock = product.stock === 0
   const isLowStock = product.stock > 0 && product.stock <= product.minStock
 
-  const handleAddToCart = () => {
+   const handleAddToCart = () => {
     if (isOutOfStock) return
 
     try {
@@ -42,6 +42,11 @@ export const ProductDetail = () => {
       const existing = cart.find((item: any) => item.productId === product.id)
 
       if (existing) {
+        // RN0031: Não permitir adicionar além do estoque
+        if (existing.quantity + quantity > product.stock) {
+          alert(`RN0031: Quantidade solicitada excede o estoque disponível (${product.stock} un.).`)
+          return
+        }
         existing.quantity += quantity
       } else {
         cart.push({
@@ -60,6 +65,7 @@ export const ProductDetail = () => {
       console.error(err)
     }
   }
+
 
   return (
     <div className="flex flex-col gap-6 text-left">

@@ -365,8 +365,14 @@ export const Checkout = () => {
     // --------------------------------------------------------------------------
     // VALIDAÇÃO DA ETAPA 2 (PAGAMENTO)
     // --------------------------------------------------------------------------
-    if (step === 2) {
+          if (step === 2) {
       if (paymentMethod === 'Múltiplos Cartões' && remainingTotal > 0) {
+        // RN0034: Pagamento com mais de um cartão com valor mínimo de R$ 10,00 por cartão
+        if (cardAmount1 < 10 || cardAmount2 < 10) {
+          alert('RN0034: No pagamento com múltiplos cartões, o valor mínimo por cartão é de R$ 10,00.')
+          return
+        }
+
         const sum = parseFloat((cardAmount1 + cardAmount2).toFixed(2))
         const diff = Math.abs(sum - remainingTotal)
         if (diff > 0.02) {
@@ -374,13 +380,22 @@ export const Checkout = () => {
           return
         }
       }
+
       if (paymentMethod === 'Cartão de Crédito' && remainingTotal > 0) {
+        // RN0035: Valor inferior a R$ 10,00 no cartão é permitido APENAS quando combinado com cupons
+        if (remainingTotal < 10 && selectedCouponIds.length === 0) {
+          alert('O valor mínimo para pagamento com cartão de crédito é de R$ 10,00.')
+          return
+        }
+
         if (!cardHolder1 || !cardNumber1 || !cardExpiry1 || !cardCvv1) {
           alert('Por favor, preencha todos os campos do cartão de crédito.')
           return
         }
       }
     }
+
+
 
     setStep((prev) => Math.min(prev + 1, 4))
   }
@@ -389,15 +404,32 @@ export const Checkout = () => {
     setStep((prev) => Math.max(prev - 1, 1))
   }
 
-  const handleToggleCoupon = (couponId: string) => {
+    const handleToggleCoupon = (couponId: string) => {
     setSelectedCouponIds((prev) => {
+      // Se está desmarcando, apenas remove
       if (prev.includes(couponId)) {
         return prev.filter((id) => id !== couponId)
-      } else {
-        return [...prev, couponId]
       }
+
+      const targetCoupon = availableCoupons.find((c) => c.id === couponId)
+      
+      // RN0033: Apenas UM cupom promocional por compra (múltiplos cupons de troca são permitidos)
+      if (targetCoupon?.type === 'Promocional') {
+        const hasPromoAlready = prev.some((id) => {
+          const existing = availableCoupons.find((c) => c.id === id)
+          return existing?.type === 'Promocional'
+        })
+
+        if (hasPromoAlready) {
+          alert('RN0033: É permitido apenas 1 cupom promocional por compra. Você pode combinar com múltiplos cupons de troca.')
+          return prev
+        }
+      }
+
+      return [...prev, couponId]
     })
   }
+
 
     /**
    * FUNÇÃO: Finalizar Pedido
@@ -410,7 +442,7 @@ export const Checkout = () => {
       const loggedCustomerStr = localStorage.getItem('logged-customer')
       const currentCust = loggedCustomerStr ? JSON.parse(loggedCustomerStr) : null
 
-      // 1. Marca cupons como Utilizados
+            // 1. Marca cupons como Utilizados e RN0036: Emite novo Cupom de Troca com a sobra/troco se superar o total
       const savedCoupons = localStorage.getItem('custom-coupons')
       const couponsList: Coupon[] = savedCoupons ? JSON.parse(savedCoupons) : []
 
@@ -429,7 +461,28 @@ export const Checkout = () => {
           }
         }
       })
+
+      // RN0036: Se a soma dos cupons superou o valor total da compra, gera automaticamente um novo Cupom de Troca com a diferença
+      const rawCouponsSum = availableCoupons
+        .filter((c) => selectedCouponIds.includes(c.id))
+        .reduce((acc, c) => acc + c.value, 0)
+
+      if (rawCouponsSum > total) {
+        const surplus = parseFloat((rawCouponsSum - total).toFixed(2))
+        const newExchangeCoupon: Coupon = {
+          id: `CUP-${Math.floor(1000 + Math.random() * 9000)}`,
+          code: `TROCA-${Math.floor(1000 + Math.random() * 9000)}`,
+          type: 'Troca',
+          value: surplus,
+          status: 'Ativo',
+          description: `Cupom de troca residual gerado no pedido ${newOrderId}`,
+          customerId: currentCust ? String(currentCust.id) : '1'
+        }
+        updatedCoupons.push(newExchangeCoupon)
+      }
+
       localStorage.setItem('custom-coupons', JSON.stringify(updatedCoupons))
+
 
       // 2. Salva novos cartões no PostgreSQL (se marcado pelo cliente)
       if (currentCust?.id) {
@@ -498,7 +551,7 @@ export const Checkout = () => {
         customerName: currentCust ? currentCust.name : 'Cliente da Loja',
         date: new Date().toISOString().split('T')[0],
         total: total,
-        status: 'EM ABERTO' as const,
+        status: 'EM PROCESSAMENTO' as const,
         items: cartItems.map((item) => ({
           productId: item.productId,
           name: item.name,
