@@ -5,6 +5,7 @@ import customerRoutes from './routes/customerRoutes.js'
 import { query } from './database/db.js'
 import addressRoutes from './routes/addressRoutes.js'
 import cardRoutes from './routes/cardRoutes.js'
+import couponRoutes from './routes/couponRoutes.js'
 
 // Carrega variáveis do arquivo .env
 dotenv.config()
@@ -47,6 +48,8 @@ app.get('/api/db-test', async (req, res) => {
 app.use('/api/clientes', customerRoutes)
 app.use('/api/clientes/:clienteId/enderecos', addressRoutes)
 app.use('/api/clientes/:clienteId/cartoes', cardRoutes)
+app.use('/api/clientes/:clienteId/cupons', couponRoutes)
+app.use('/api/cupons', couponRoutes)
 
 // INICIALIZAÇÃO DO SERVIDOR
 app.listen(PORT, () => {

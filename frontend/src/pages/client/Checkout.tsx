@@ -5,9 +5,9 @@ import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Check, CreditCard as CardIcon, MapPin, ClipboardCheck, PartyPopper, Ticket, Plus, CheckCircle2 } from 'lucide-react'
-import { mockCoupons, mockCards, type Coupon, type CreditCard, type Address } from '../../mock/mockData'
 import { getCustomerAddresses, createCustomerAddress } from '../../services/addressService'
 import { getCustomerCards, createCustomerCard } from '../../services/cardService'
+import { getCustomerCoupons, createCustomerCoupon, useCouponByCode } from '../../services/couponService'
 import { maskCEP, maskCardNumber, maskCardExpiry, maskCVV, onlyNumbers } from '../../utils/inputMasks'
 
 
@@ -164,9 +164,19 @@ export const Checkout = () => {
     }
   }
 
-  
+  // Carrega cupons do PostgreSQL
+  const loadCoupons = async (customerId: string | number) => {
+    try {
+      const data = await getCustomerCoupons(customerId)
+      setAvailableCoupons(data)
+    } catch (err) {
+      console.warn('⚠️ Não foi possível carregar cupons do PostgreSQL:', err)
+      setAvailableCoupons([])
+    }
+  }
 
-  // Load Initial Data
+
+   // Load Initial Data
   useEffect(() => {
     try {
       // Cart items
@@ -174,7 +184,8 @@ export const Checkout = () => {
       if (savedCart) {
         setCartItems(JSON.parse(savedCart))
       }
-            // Logged user address & cards from PostgreSQL
+
+      // Logged user: carrega endereços, cartões e cupons do PostgreSQL
       const savedCustomer = localStorage.getItem('logged-customer')
       let customer: any = null
       if (savedCustomer) {
@@ -182,23 +193,14 @@ export const Checkout = () => {
         if (customer?.id) {
           loadAddresses(customer.id)
           loadCards(customer.id)
+          loadCoupons(customer.id)
         }
       }
-
-      // Coupons
-      const savedCoupons = localStorage.getItem('custom-coupons')
-      const customCoupons = savedCoupons ? JSON.parse(savedCoupons) : []
-      const allCoupons = [...customCoupons, ...mockCoupons]
-      const filteredCoupons = customer
-        ? allCoupons.filter((c: Coupon) => c.status === 'Ativo' && c.customerId === customer.id)
-        : allCoupons.filter((c: Coupon) => c.status === 'Ativo')
-
-      setAvailableCoupons(filteredCoupons)
-
     } catch (err) {
       console.error(err)
     }
   }, [])
+
 
   
 
@@ -442,46 +444,28 @@ export const Checkout = () => {
       const loggedCustomerStr = localStorage.getItem('logged-customer')
       const currentCust = loggedCustomerStr ? JSON.parse(loggedCustomerStr) : null
 
-            // 1. Marca cupons como Utilizados e RN0036: Emite novo Cupom de Troca com a sobra/troco se superar o total
-      const savedCoupons = localStorage.getItem('custom-coupons')
-      const couponsList: Coupon[] = savedCoupons ? JSON.parse(savedCoupons) : []
-
-      const updatedCoupons = couponsList.map((c) => {
-        if (selectedCouponIds.includes(c.id)) {
-          return { ...c, status: 'Utilizado' as const }
+                  // 1. Marca cupons como Utilizados no PostgreSQL e RN0036: Emite novo Cupom de Troca com o troco
+      for (const couponId of selectedCouponIds) {
+        const found = availableCoupons.find((c) => c.id === couponId)
+        if (found) {
+          useCouponByCode(found.code).catch((err) => console.warn('⚠️ Erro ao marcar cupom como utilizado:', err))
         }
-        return c
-      })
+      }
 
-      mockCoupons.forEach((mc) => {
-        if (selectedCouponIds.includes(mc.id)) {
-          const alreadyExists = updatedCoupons.find(c => c.id === mc.id)
-          if (!alreadyExists) {
-            updatedCoupons.push({ ...mc, status: 'Utilizado' as const })
-          }
-        }
-      })
-
-      // RN0036: Se a soma dos cupons superou o valor total da compra, gera automaticamente um novo Cupom de Troca com a diferença
+      // RN0036: Se a soma dos cupons superou o valor total da compra, salva no PostgreSQL o novo Cupom de Troca com a diferença
       const rawCouponsSum = availableCoupons
         .filter((c) => selectedCouponIds.includes(c.id))
         .reduce((acc, c) => acc + c.value, 0)
 
-      if (rawCouponsSum > total) {
+      if (rawCouponsSum > total && currentCust?.id) {
         const surplus = parseFloat((rawCouponsSum - total).toFixed(2))
-        const newExchangeCoupon: Coupon = {
-          id: `CUP-${Math.floor(1000 + Math.random() * 9000)}`,
+        createCustomerCoupon(currentCust.id, {
           code: `TROCA-${Math.floor(1000 + Math.random() * 9000)}`,
           type: 'Troca',
           value: surplus,
-          status: 'Ativo',
-          description: `Cupom de troca residual gerado no pedido ${newOrderId}`,
-          customerId: currentCust ? String(currentCust.id) : '1'
-        }
-        updatedCoupons.push(newExchangeCoupon)
+          description: `Cupom de troca residual gerado no pedido ${newOrderId}`
+        }).catch((err) => console.warn('⚠️ Erro ao salvar cupom residual no banco:', err))
       }
-
-      localStorage.setItem('custom-coupons', JSON.stringify(updatedCoupons))
 
 
       // 2. Salva novos cartões no PostgreSQL (se marcado pelo cliente)
