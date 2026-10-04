@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { mockOrders } from '../../mock/mockData'
 import type { Order } from '../../mock/mockData'
+import { getOrderById, updateOrderStatus as updateOrderStatusApi } from '../../services/orderService'
 import { Breadcrumb } from '../../components/ui/Breadcrumb'
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
@@ -20,24 +20,25 @@ export const OrderDetail = () => {
   const [exchangeReason, setExchangeReason] = useState('')
 
   useEffect(() => {
-    try {
-      const loggedCustomerStr = localStorage.getItem('logged-customer')
-      const currentCust = loggedCustomerStr ? JSON.parse(loggedCustomerStr) : null
+    if (!id) return
 
-      const savedCustom = localStorage.getItem('custom-orders')
-      const customList = savedCustom ? JSON.parse(savedCustom) : []
-      const combined = [...customList, ...mockOrders]
-      const found = combined.find((o) => o.id === id)
-      
-      if (found && currentCust && found.customerId !== currentCust.id) {
-        setOrder(null)
-      } else {
-        setOrder(found || null)
-      }
-    } catch {
-      const found = mockOrders.find((o) => o.id === id)
-      setOrder(found || null)
-    }
+    getOrderById(id)
+      .then((data) => {
+        if (data && data.id) {
+          setOrder(data)
+        }
+      })
+      .catch(() => {
+        // Fallback para cache local
+        try {
+          const savedCustom = localStorage.getItem('custom-orders')
+          const customList = savedCustom ? JSON.parse(savedCustom) : []
+          const found = customList.find((o: Order) => o.id === id || String(o.id) === String(id))
+          setOrder(found || null)
+        } catch {
+          setOrder(null)
+        }
+      })
   }, [id])
 
 

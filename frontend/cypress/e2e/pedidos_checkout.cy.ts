@@ -33,6 +33,13 @@ describe('Módulo de Criação de Pedidos [DRS_LES_1_2026]', () => {
   }
 
   beforeEach(() => {
+    // Reativa os cupons de teste no PostgreSQL para garantir autonomia de cada teste
+    cy.request({
+      method: 'POST',
+      url: 'http://localhost:3001/api/cupons/reset',
+      failOnStatusCode: false
+    })
+
     // Inicializa a sessão do cliente autenticado e limpa o carrinho
     cy.window().then((win) => {
       win.localStorage.setItem('logged-customer', JSON.stringify(clientePadrao))

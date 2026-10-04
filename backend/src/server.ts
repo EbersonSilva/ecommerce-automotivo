@@ -7,6 +7,7 @@ import addressRoutes from './routes/addressRoutes.js'
 import cardRoutes from './routes/cardRoutes.js'
 import couponRoutes from './routes/couponRoutes.js'
 import productRoutes from './routes/productRoutes.js'
+import orderRoutes from './routes/orderRoutes.js'
 
 
 // Carrega variáveis do arquivo .env
@@ -53,6 +54,7 @@ app.use('/api/clientes/:clienteId/cartoes', cardRoutes)
 app.use('/api/clientes/:clienteId/cupons', couponRoutes)
 app.use('/api/cupons', couponRoutes)
 app.use('/api/produtos', productRoutes)
+app.use('/api', orderRoutes)
 
 
 // INICIALIZAÇÃO DO SERVIDOR

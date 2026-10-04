@@ -123,3 +123,23 @@ export const useCoupon = async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ error: 'Erro ao atualizar status do cupom.' })
   }
 }
+
+/**
+ * ==============================================================================
+ * 4. RESETAR CUPONS DE TESTE (POST /api/cupons/reset)
+ * ==============================================================================
+ */
+export const resetTestCoupons = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const sql = `
+      UPDATE cupons
+      SET status = 'Ativo'
+      WHERE codigo IN ('BEMVINDO10', 'PROMO20', 'TROCA-100', 'TROCA-50', 'TROCA-300');
+    `
+    await query(sql)
+    res.status(200).json({ message: 'Cupons de teste reativados com sucesso!' })
+  } catch (error: any) {
+    console.error('❌ Erro ao resetar cupons:', error)
+    res.status(500).json({ error: 'Erro ao resetar cupons de teste.' })
+  }
+}

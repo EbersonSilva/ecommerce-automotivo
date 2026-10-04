@@ -12,6 +12,8 @@ import { Table } from '../../components/ui/Table'
 import { updateCustomer } from '../../services/customerService'
 import { getCustomerAddresses, createCustomerAddress, updateCustomerAddress, deleteCustomerAddress } from '../../services/addressService'
 import { getCustomerCards, createCustomerCard, setPreferredCustomerCard, deleteCustomerCard } from '../../services/cardService'
+import { getCustomerOrders } from '../../services/orderService'
+import { getCustomerCoupons } from '../../services/couponService'
 import { maskPhone, maskCPF, maskCEP, onlyNumbers, maskCardNumber, maskCardExpiry, maskCVV } from '../../utils/inputMasks'
 
 
@@ -99,25 +101,50 @@ export const Account = () => {
   const [coupons, setCoupons] = useState<Coupon[]>([])
   const [exchanges, setExchanges] = useState<Exchange[]>([])
 
-  const loadData = (currentCust: Customer | null) => {
-    try {
-      // 1. Pedidos do Cliente
-      const savedOrders = localStorage.getItem('custom-orders')
-      const customOrders = savedOrders ? JSON.parse(savedOrders) : []
-      const allOrders = [...customOrders, ...mockOrders]
-      const filteredOrders = currentCust
-        ? allOrders.filter((o: Order) => o.customerId === currentCust.id || o.customerName === currentCust.name)
-        : allOrders
-      setOrders(filteredOrders)
+  const loadData = async (currentCust: Customer | null) => {
+    if (!currentCust?.id) {
+      setOrders([])
+      setCoupons([])
+      setExchanges([])
+      return
+    }
 
-      // 2. Cupons do Cliente
-      const savedCoupons = localStorage.getItem('custom-coupons')
-      const customCoupons = savedCoupons ? JSON.parse(savedCoupons) : []
-      const allCoupons = [...customCoupons, ...mockCoupons]
-      const filteredCoupons = currentCust
-        ? allCoupons.filter((c: Coupon) => c.customerId === currentCust.id)
-        : allCoupons
-      setCoupons(filteredCoupons)
+    try {
+      // 1. Pedidos do Cliente (PostgreSQL)
+      try {
+        const dbOrders = await getCustomerOrders(currentCust.id)
+        if (dbOrders && dbOrders.length > 0) {
+          setOrders(dbOrders)
+        } else {
+          const savedOrders = localStorage.getItem('custom-orders')
+          const customOrders = savedOrders ? JSON.parse(savedOrders) : []
+          const filteredOrders = customOrders.filter((o: Order) => String(o.customerId) === String(currentCust.id))
+          setOrders(filteredOrders)
+        }
+      } catch {
+        const savedOrders = localStorage.getItem('custom-orders')
+        const customOrders = savedOrders ? JSON.parse(savedOrders) : []
+        const filteredOrders = customOrders.filter((o: Order) => String(o.customerId) === String(currentCust.id))
+        setOrders(filteredOrders)
+      }
+
+      // 2. Cupons do Cliente (PostgreSQL)
+      try {
+        const dbCoupons = await getCustomerCoupons(currentCust.id)
+        if (dbCoupons && dbCoupons.length > 0) {
+          setCoupons(dbCoupons)
+        } else {
+          const savedCoupons = localStorage.getItem('custom-coupons')
+          const customCoupons = savedCoupons ? JSON.parse(savedCoupons) : []
+          const filteredCoupons = customCoupons.filter((c: Coupon) => String(c.customerId) === String(currentCust.id))
+          setCoupons(filteredCoupons)
+        }
+      } catch {
+        const savedCoupons = localStorage.getItem('custom-coupons')
+        const customCoupons = savedCoupons ? JSON.parse(savedCoupons) : []
+        const filteredCoupons = customCoupons.filter((c: Coupon) => String(c.customerId) === String(currentCust.id))
+        setCoupons(filteredCoupons)
+      }
 
       // 3. Trocas e Devoluções do Cliente
       const savedExchanges = localStorage.getItem('custom-exchanges')
@@ -126,18 +153,12 @@ export const Account = () => {
         ...ex,
         status: ex.status === 'Pendente' ? 'TROCA SOLICITADA' : ex.status
       }))
-
-      const customExchangeIds = customExchanges.map((ex: Exchange) => ex.id)
-      const filteredMocks = mockExchanges.filter((ex) => !customExchangeIds.includes(ex.id))
-      const allExchanges = [...customExchanges, ...filteredMocks]
-      const filteredExchanges = currentCust
-        ? allExchanges.filter((ex: any) => ex.customerId === currentCust.id || ex.customerName === currentCust.name)
-        : allExchanges
+      const filteredExchanges = customExchanges.filter((ex: any) => String(ex.customerId) === String(currentCust.id))
       setExchanges(filteredExchanges)
     } catch {
-      setOrders(mockOrders)
-      setCoupons(mockCoupons)
-      setExchanges(mockExchanges)
+      setOrders([])
+      setCoupons([])
+      setExchanges([])
     }
   }
 

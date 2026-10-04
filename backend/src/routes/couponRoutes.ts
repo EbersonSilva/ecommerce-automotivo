@@ -2,7 +2,8 @@ import { Router } from 'express'
 import {
   getCouponsByCustomer,
   createCoupon,
-  useCoupon
+  useCoupon,
+  resetTestCoupons
 } from '../controllers/couponController.js'
 
 // mergeParams: true permite acessar o parâmetro ':clienteId' vindo do server.ts
@@ -16,7 +17,11 @@ router.get('/', getCouponsByCustomer)
 // POST /api/clientes/:clienteId/cupons ou POST /api/cupons
 router.post('/', createCoupon)
 
-// 3. Marcar cupom como utilizado ao concluir pedido
+// 3. Resetar cupons de teste da apresentação
+// POST /api/cupons/reset
+router.post('/reset', resetTestCoupons)
+
+// 4. Marcar cupom como utilizado ao concluir pedido
 // PATCH /api/cupons/:codigo/utilizar
 router.patch('/:codigo/utilizar', useCoupon)
 

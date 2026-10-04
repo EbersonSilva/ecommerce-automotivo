@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { mockOrders } from '../../mock/mockData'
 import type { Order } from '../../mock/mockData'
+import { getCustomerOrders } from '../../services/orderService'
 import { Breadcrumb } from '../../components/ui/Breadcrumb'
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
 import { Table } from '../../components/ui/Table'
@@ -10,26 +10,42 @@ import { Eye, ClipboardList } from 'lucide-react'
 
 export const Orders = () => {
   const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(false)
 
   const loggedCustomerStr = localStorage.getItem('logged-customer')
   const currentCust = loggedCustomerStr ? JSON.parse(loggedCustomerStr) : null
 
-  useEffect(() => {
+  const loadOrders = async () => {
+    if (!currentCust?.id) {
+      setOrders([])
+      return
+    }
+
+    setLoading(true)
     try {
-      if (!currentCust) {
-        setOrders([])
-        return
+      const data = await getCustomerOrders(currentCust.id)
+      if (data && data.length > 0) {
+        setOrders(data)
+      } else {
+        // Fallback para cache local se banco retornar vazio
+        const savedCustom = localStorage.getItem('custom-orders')
+        const customList = savedCustom ? JSON.parse(savedCustom) : []
+        const filtered = customList.filter((o: Order) => String(o.customerId) === String(currentCust.id))
+        setOrders(filtered)
       }
+    } catch (err) {
+      console.warn('⚠️ Erro ao buscar pedidos do PostgreSQL:', err)
       const savedCustom = localStorage.getItem('custom-orders')
       const customList = savedCustom ? JSON.parse(savedCustom) : []
-      const allOrders = [...customList, ...mockOrders]
-
-      // Filter: only show orders for the logged-in customer
-      const filteredOrders = allOrders.filter((order: Order) => order.customerId === currentCust.id)
-      setOrders(filteredOrders)
-    } catch {
-      setOrders([])
+      const filtered = customList.filter((o: Order) => String(o.customerId) === String(currentCust.id))
+      setOrders(filtered)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
+    loadOrders()
   }, [])
 
   if (!currentCust) {

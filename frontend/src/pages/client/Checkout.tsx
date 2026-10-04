@@ -8,6 +8,7 @@ import { Check, CreditCard as CardIcon, MapPin, ClipboardCheck, PartyPopper, Tic
 import { getCustomerAddresses, createCustomerAddress } from '../../services/addressService'
 import { getCustomerCards, createCustomerCard } from '../../services/cardService'
 import { getCustomerCoupons, createCustomerCoupon, useCouponByCode } from '../../services/couponService'
+import { createOrder } from '../../services/orderService'
 import { maskCEP, maskCardNumber, maskCardExpiry, maskCVV, onlyNumbers } from '../../utils/inputMasks'
 
 
@@ -517,10 +518,6 @@ export const Checkout = () => {
         }
       }
 
-      // 3. Salva novo pedido no localStorage
-      const savedOrders = localStorage.getItem('custom-orders')
-      const ordersList = savedOrders ? JSON.parse(savedOrders) : []
-
       let payMethodDescription = paymentMethod as string
       if (paymentMethod === 'Múltiplos Cartões') {
         payMethodDescription = `Múltiplos Cartões (Cartão 1: R$ ${cardAmount1.toFixed(2)} / Cartão 2: R$ ${cardAmount2.toFixed(2)})`
@@ -528,6 +525,38 @@ export const Checkout = () => {
       if (selectedCouponIds.length > 0) {
         payMethodDescription += ` + ${selectedCouponIds.length} Cupom(ns) (Desconto: R$ ${couponsDiscount.toFixed(2)})`
       }
+
+      // 3. Persiste no PostgreSQL (Tabelas 'pedidos' e 'itens_pedido' com Transação ACID)
+      if (currentCust?.id) {
+        try {
+          await createOrder({
+            clienteId: currentCust.id,
+            clienteNome: currentCust.name || 'Cliente',
+            codigo: newOrderId,
+            valorSubtotal: subtotal,
+            valorFrete: shipping,
+            valorDescontoCupons: couponsDiscount,
+            valorTotal: remainingTotal,
+            formaPagamento: payMethodDescription,
+            enderecoEntrega: finalShippingAddressText,
+            enderecoCobranca: finalBillingAddressText || finalShippingAddressText,
+            status: 'EM PROCESSAMENTO',
+            itens: cartItems.map((item) => ({
+              produtoId: item.productId,
+              nomeProduto: item.name,
+              quantidade: item.quantity,
+              precoUnitario: item.price,
+              subtotal: item.price * item.quantity
+            }))
+          })
+        } catch (dbErr: any) {
+          console.warn('⚠️ Erro ao persistir pedido no PostgreSQL:', dbErr.message)
+        }
+      }
+
+      // 4. Salva novo pedido no cache local para redundância instantânea
+      const savedOrders = localStorage.getItem('custom-orders')
+      const ordersList = savedOrders ? JSON.parse(savedOrders) : []
 
       const newOrder = {
         id: newOrderId,
