@@ -212,7 +212,7 @@ export const Checkout = () => {
   // Coupons discount calculations
   const couponsDiscount = availableCoupons
     .filter((c) => selectedCouponIds.includes(c.id))
-    .reduce((acc, c) => acc + c.value, 0)
+    .reduce((acc, c) => acc + (parseFloat(c.value as any) || 0), 0)
 
   const remainingTotal = Math.max(0, total - couponsDiscount)
 
@@ -455,7 +455,7 @@ export const Checkout = () => {
       // RN0036: Se a soma dos cupons superou o valor total da compra, salva no PostgreSQL o novo Cupom de Troca com a diferença
       const rawCouponsSum = availableCoupons
         .filter((c) => selectedCouponIds.includes(c.id))
-        .reduce((acc, c) => acc + c.value, 0)
+        .reduce((acc, c) => acc + (parseFloat(c.value as any) || 0), 0)
 
       if (rawCouponsSum > total && currentCust?.id) {
         const surplus = parseFloat((rawCouponsSum - total).toFixed(2))
@@ -1458,7 +1458,7 @@ export const Checkout = () => {
                   Voltar
                 </Button>
                 <Button onClick={handlePlaceOrder} className="px-8 font-bold">
-                  Confirmar e Finalizar
+                  Confirmar e Finalizar Pedido
                 </Button>
               </div>
             </div>
@@ -1474,20 +1474,26 @@ export const Checkout = () => {
               </div>
               <div>
                 <h3 className="text-2xl font-black text-white leading-tight tracking-tight mb-2">
-                  Pedido Concluído com Sucesso!
+                  Pedido Realizado com Sucesso!
                 </h3>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto mb-1">
-                  Seu pedido foi registrado em nosso sistema de simulação.
+                  Seu pedido foi registrado em nosso sistema com sucesso.
                 </p>
-                <span className="text-xs font-mono bg-slate-950 text-indigo-400 px-3.5 py-1.5 rounded-lg border border-slate-850 inline-block mt-3">
-                  Código: {createdOrderCode}
-                </span>
+                <div className="flex items-center justify-center gap-2 mt-3">
+                  <span className="text-xs font-mono bg-slate-950 text-indigo-400 px-3.5 py-1.5 rounded-lg border border-slate-850 inline-block">
+                    Código: {createdOrderCode}
+                  </span>
+                  <span className="text-xs font-bold bg-amber-500/10 border border-amber-500/20 text-amber-400 px-3.5 py-1.5 rounded-lg">
+                    Status: EM PROCESSAMENTO
+                  </span>
+                </div>
               </div>
 
               {/* Splitted billing summary for confirmation screen */}
               <div className="bg-slate-950 border border-slate-850 p-4 rounded-xl text-xs text-left w-full max-w-md font-mono text-slate-400">
                 <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 font-sans">Comprovante de Lançamento</h4>
                 <p>Pedido ID: {createdOrderCode}</p>
+                <p>Status: <strong className="text-amber-400">EM PROCESSAMENTO</strong></p>
                 <p>Valor Bruto: R$ {total.toFixed(2)}</p>
                 {selectedCouponIds.length > 0 && (
                   <p className="text-emerald-400">Cupons Aplicados: - R$ {couponsDiscount.toFixed(2)}</p>

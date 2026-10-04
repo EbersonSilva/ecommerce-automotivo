@@ -28,7 +28,12 @@ export const getCouponsByCustomer = async (req: Request, res: Response): Promise
     `
 
     const result = await query(sql, [clienteId])
-    res.status(200).json(result.rows)
+    const rows = result.rows.map((r: any) => ({
+      ...r,
+      id: String(r.id),
+      value: parseFloat(r.value) || 0
+    }))
+    res.status(200).json(rows)
   } catch (error: any) {
     console.error('❌ Erro ao buscar cupons:', error)
     res.status(500).json({ error: 'Erro ao buscar cupons no banco de dados.' })

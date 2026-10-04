@@ -6,6 +6,8 @@ import { query } from './database/db.js'
 import addressRoutes from './routes/addressRoutes.js'
 import cardRoutes from './routes/cardRoutes.js'
 import couponRoutes from './routes/couponRoutes.js'
+import productRoutes from './routes/productRoutes.js'
+
 
 // Carrega variáveis do arquivo .env
 dotenv.config()
@@ -50,6 +52,8 @@ app.use('/api/clientes/:clienteId/enderecos', addressRoutes)
 app.use('/api/clientes/:clienteId/cartoes', cardRoutes)
 app.use('/api/clientes/:clienteId/cupons', couponRoutes)
 app.use('/api/cupons', couponRoutes)
+app.use('/api/produtos', productRoutes)
+
 
 // INICIALIZAÇÃO DO SERVIDOR
 app.listen(PORT, () => {

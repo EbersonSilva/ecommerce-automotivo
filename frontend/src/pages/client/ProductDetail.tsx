@@ -1,19 +1,36 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { mockProducts } from '../../mock/mockData'
+import type { Product } from '../../mock/mockData'
+import { getProductById } from '../../services/productService'
 import { Breadcrumb } from '../../components/ui/Breadcrumb'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
-import { ShoppingCart, ArrowLeft, Shield, CheckCircle2, Truck } from 'lucide-react'
+import { ShoppingCart, ArrowLeft, CheckCircle2 } from 'lucide-react'
 
 export const ProductDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [quantity, setQuantity] = useState(1)
+  const [product, setProduct] = useState<Product | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const product = useMemo(() => {
-    return mockProducts.find((p) => p.id === id)
+  useEffect(() => {
+    if(id){
+      setLoading(true)
+      getProductById(id)
+      .then((data) => setProduct(data))
+      .catch((err) => console.error('Erro ao buscar produto:', err))
+      .finally(() => setLoading(false))
+    }
   }, [id])
+
+  if (loading) {
+    return (
+      <div className="text-center py-20 text-slate-400 font-bold">
+        Carregando detalhes do produto...
+      </div>
+    )
+  }
 
   if (!product) {
     return (

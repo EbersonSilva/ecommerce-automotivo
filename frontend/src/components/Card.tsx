@@ -64,7 +64,7 @@ export const Card = ({ product, onAddToCart }: CardProps) => {
           className="flex items-center gap-1.5"
         >
           <ShoppingCart className="w-3.5 h-3.5" />
-          Comprar
+          Adicionar ao Carrinho
         </Button>
       </div>
     </div>

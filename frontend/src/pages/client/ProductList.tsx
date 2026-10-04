@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { mockProducts } from '../../mock/mockData'
+import type { Product } from '../../mock/mockData'
+import { getProducts } from '../../services/productService'
 import { Card } from '../../components/Card'
 import { Breadcrumb } from '../../components/ui/Breadcrumb'
 import { Select } from '../../components/ui/Select'
@@ -22,6 +23,20 @@ export const ProductList = () => {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 6
 
+  //Produtos direto do PostgreSQL
+  const [productsList, setProductsList] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+
+  //Carrega produtos do banco na montagem do componente
+
+  useEffect(() => {
+    setLoading(true)
+    getProducts()
+    .then((data) => setProductsList(data))
+    .catch((err) => console.error('Erro ao buscar produtos:', err))
+    .finally(() => setLoading(false))
+  },[])
+    
   // Sync state with URL search params on mount or param change
   useEffect(() => {
     const searchParam = searchParams.get('search') || ''
@@ -32,20 +47,20 @@ export const ProductList = () => {
     setCurrentPage(1)
   }, [searchParams])
 
-  // Extract unique categories and manufacturers for filter dropdowns
+  //  Categorias e Fabricantes extraídos diretamente dos produtos do banco
   const categories = useMemo(() => {
-    return Array.from(new Set(mockProducts.map((p) => p.category)))
-  }, [])
+    return Array.from(new Set(productsList.map((p) => p.category)))
+  }, [productsList])
 
   const manufacturers = useMemo(() => {
-    return Array.from(new Set(mockProducts.map((p) => p.manufacturer)))
-  }, [])
+    return Array.from(new Set(productsList.map((p) => p.manufacturer)))
+  }, [productsList])
 
-  // Filter and Sort Logic
+ // Filtros e Ordenação aplicados sobre os produtos do banco
   const filteredProducts = useMemo(() => {
-    let result = mockProducts.filter((p) => p.status === 'Ativo')
+    let result = productsList.filter((p) => p.status === 'Ativo')
 
-    // Search query
+    // Busca por texto
     if (search.trim()) {
       const q = search.toLowerCase()
       result = result.filter(
@@ -55,44 +70,36 @@ export const ProductList = () => {
           p.manufacturer.toLowerCase().includes(q)
       )
     }
-
-    // Category
+    // Categoria
     if (selectedCategory) {
       result = result.filter((p) => p.category === selectedCategory)
     }
-
-    // Manufacturer
+    // Fabricante
     if (selectedManufacturer) {
       result = result.filter((p) => p.manufacturer === selectedManufacturer)
     }
-
-    // Max Price
+    // Preço Máximo
     if (maxPrice) {
       const priceNum = parseFloat(maxPrice)
       if (!isNaN(priceNum)) {
         result = result.filter((p) => p.price <= priceNum)
       }
     }
-
-    // Sorting
+    // Ordenação
     result.sort((a, b) => {
       if (sortOption === 'price-asc') return a.price - b.price
       if (sortOption === 'price-desc') return b.price - a.price
       if (sortOption === 'name-desc') return b.name.localeCompare(a.name)
-      // Default: name-asc
-      return a.name.localeCompare(a.name)
+      return a.name.localeCompare(b.name)
     })
-
     return result
-  }, [search, selectedCategory, selectedManufacturer, maxPrice, sortOption])
-
-  // Paginated Products
+  }, [productsList, search, selectedCategory, selectedManufacturer, maxPrice, sortOption])
+  // Paginação
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage)
   const paginatedProducts = useMemo(() => {
     const startIdx = (currentPage - 1) * itemsPerPage
     return filteredProducts.slice(startIdx, startIdx + itemsPerPage)
   }, [filteredProducts, currentPage])
-
   const handleClearFilters = () => {
     setSearch('')
     setSelectedCategory('')
@@ -101,17 +108,19 @@ export const ProductList = () => {
     setSortOption('name-asc')
     setSearchParams({})
   }
-
   const handleAddToCart = (productId: string) => {
     try {
       const savedCart = localStorage.getItem('cart')
       const cart = savedCart ? JSON.parse(savedCart) : []
-      const existing = cart.find((item: any) => item.productId === productId)
+      const existing = cart.find((item: any) => String(item.productId) === String(productId))
       
-      const product = mockProducts.find((p) => p.id === productId)
+      const product = productsList.find((p) => String(p.id) === String(productId))
       if (!product) return
-
       if (existing) {
+        if (existing.quantity + 1 > product.stock) {
+          alert(`RN0031: Quantidade solicitada excede o estoque disponível (${product.stock} un.).`)
+          return
+        }
         existing.quantity += 1
       } else {
         cart.push({
@@ -124,7 +133,7 @@ export const ProductList = () => {
       }
       localStorage.setItem('cart', JSON.stringify(cart))
       window.dispatchEvent(new Event('cart-updated'))
-      alert('Produto adicionado ao carrinho!')
+      alert(`1 unidade de "${product.name}" adicionada ao carrinho!`)
     } catch (err) {
       console.error(err)
     }

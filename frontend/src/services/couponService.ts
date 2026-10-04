@@ -17,7 +17,13 @@ export async function getCustomerCoupons(customerId: string | number): Promise<C
     throw new Error(data.error || 'Falha ao buscar cupons do cliente.')
   }
 
-  return data
+  return Array.isArray(data)
+    ? data.map((c: any) => ({
+        ...c,
+        id: String(c.id),
+        value: typeof c.value === 'number' ? c.value : parseFloat(c.value) || 0
+      }))
+    : []
 }
 
 // 2. CADASTRAR NOVO CUPOM (Atende RN0036: Troco de compra em Cupom de Troca)
