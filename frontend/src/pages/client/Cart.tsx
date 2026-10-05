@@ -46,9 +46,9 @@ export const Cart: React.FC = () => {
       if (item.productId === productId) {
         const nextQty = item.quantity + delta
 
-        // RN0031: Não permitir quantidade superior ao estoque disponível
+        // Não permitir quantidade superior ao estoque disponível
         if (nextQty > maxStock) {
-          alert(`RN0031: Quantidade máxima disponível em estoque para "${item.name}" é de ${maxStock} unidade(s).`)
+          alert(`Quantidade máxima disponível em estoque para "${item.name}" é de ${maxStock} unidade(s).`)
           return item
         }
 

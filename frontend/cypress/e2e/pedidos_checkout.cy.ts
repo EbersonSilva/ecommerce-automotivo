@@ -18,8 +18,8 @@
  */
 
 // ⏱️ CONTROLE DE VELOCIDADE DA APRESENTAÇÃO AO VIVO
-const TYPING_SPEED = 25
-const PAUSE_TIME = 800
+const TYPING_SPEED = 100
+const PAUSE_TIME = 2000
 
 describe('Módulo de Criação de Pedidos [DRS_LES_1_2026]', () => {
   // Cliente de Teste com Endereço e Cartão Pré-Cadastrados no PostgreSQL
@@ -93,8 +93,8 @@ describe('Módulo de Criação de Pedidos [DRS_LES_1_2026]', () => {
     cy.contains('.bg-slate-900\\/40', 'Filtro de Óleo').contains('button', '+').click()
     cy.wait(PAUSE_TIME)
 
-    // Valida que o Modal de Regra de Negócio (RN0031) apareceu e clica em OK
-    cy.contains('RN0031').should('be.visible')
+    // Valida que o Modal de Alerta de Estoque apareceu e clica em OK
+    cy.contains('Quantidade máxima disponível em estoque').should('be.visible')
     cy.get('[data-testid="modal-ok-btn"]').click()
     cy.wait(PAUSE_TIME)
   })
@@ -216,8 +216,8 @@ describe('Módulo de Criação de Pedidos [DRS_LES_1_2026]', () => {
     cy.contains('button', 'Revisar Pedido').click()
     cy.wait(PAUSE_TIME)
 
-    // Valida o Modal de RN0034 e clica no botão OK do Modal
-    cy.contains('RN0034').should('be.visible')
+    // Valida o Modal de Múltiplos Cartões e clica no botão OK do Modal
+    cy.contains('No pagamento com múltiplos cartões, o valor mínimo por cartão é de R$ 10,00').should('be.visible')
     cy.get('[data-testid="modal-ok-btn"]').click()
     cy.wait(PAUSE_TIME)
 
@@ -257,17 +257,17 @@ describe('Módulo de Criação de Pedidos [DRS_LES_1_2026]', () => {
     cy.contains('button', 'Prosseguir para Pagamento').click()
     cy.wait(PAUSE_TIME)
 
-    // 1. Validação da RN0033: Tentar marcar 2 cupons promocionais
+    // 1. Validação: Tentar marcar 2 cupons promocionais
     // Clica no primeiro cupom promocional
     cy.contains('BEMVINDO10').click()
     cy.wait(PAUSE_TIME)
 
-    // Tenta clicar no segundo cupom promocional (deve abrir o modal conforme RN0033)
+    // Tenta clicar no segundo cupom promocional (deve abrir o modal de alerta)
     cy.contains('PROMO20').click()
     cy.wait(PAUSE_TIME)
 
-    // Valida o Modal de RN0033 e clica no botão OK do Modal
-    cy.contains('RN0033').should('be.visible')
+    // Valida o Modal de Cupons e clica no botão OK do Modal
+    cy.contains('É permitido apenas 1 cupom promocional por compra').should('be.visible')
     cy.get('[data-testid="modal-ok-btn"]').click()
     cy.wait(PAUSE_TIME)
 

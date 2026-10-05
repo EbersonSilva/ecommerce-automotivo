@@ -118,7 +118,7 @@ export const ProductList = () => {
       if (!product) return
       if (existing) {
         if (existing.quantity + 1 > product.stock) {
-          alert(`RN0031: Quantidade solicitada excede o estoque disponível (${product.stock} un.).`)
+          alert(`Quantidade solicitada excede o estoque disponível (${product.stock} un.).`)
           return
         }
         existing.quantity += 1

@@ -396,7 +396,7 @@ export const Account = () => {
     if (!loggedCustomer?.id) return
 
     if (!newCardNumber || !newCardHolder || !newCardBrand || !newCardCvv || !newCardExpiry) {
-      alert('Favor preencher todos os campos obrigatórios do cartão (RN0024).')
+      alert('Favor preencher todos os campos obrigatórios do cartão.')
       return
     }
 

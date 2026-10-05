@@ -33,29 +33,20 @@ export const AlertModalProvider: React.FC<{ children: ReactNode }> = ({ children
   const inferTypeAndTitle = (msg: string): { type: AlertType; title: string } => {
     const lower = msg.toLowerCase()
     
-    // Regras de Negócio ou Validações de formulário/estoque/cupom
+    // Validações de formulário, estoque, cupons, cartões e limites
     if (
-      msg.includes('RN0031') || 
-      msg.includes('RN0033') || 
-      msg.includes('RN0034') || 
-      msg.includes('RN0035') || 
-      msg.includes('RN0021') || 
-      msg.includes('RN0022') || 
-      msg.includes('RN0023') || 
-      msg.includes('RN0024') || 
-      msg.includes('RN0026') ||
       lower.includes('favor preencher') ||
       lower.includes('por favor, preencha') ||
       lower.includes('preencha todos') ||
+      lower.includes('obrigatório') ||
       lower.includes('excede') ||
+      lower.includes('estoque') ||
       lower.includes('máxima disponível') ||
       lower.includes('já está cadastrado') ||
       lower.includes('permitido apenas') ||
-      lower.includes('valor mínimo')
+      lower.includes('valor mínimo') ||
+      lower.includes('atenção')
     ) {
-      if (msg.includes('RN0031')) return { type: 'warning', title: 'RN0031 - Limite de Estoque' }
-      if (msg.includes('RN0033')) return { type: 'warning', title: 'RN0033 - Regra de Cupons' }
-      if (msg.includes('RN0034') || msg.includes('RN0035')) return { type: 'warning', title: 'RN0034 - Regra de Cartões' }
       return { type: 'warning', title: 'Atenção' }
     }
 

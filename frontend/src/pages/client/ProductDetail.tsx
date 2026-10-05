@@ -59,9 +59,9 @@ export const ProductDetail = () => {
       const existing = cart.find((item: any) => item.productId === product.id)
 
       if (existing) {
-        // RN0031: Não permitir adicionar além do estoque
+        // Não permitir adicionar além do estoque
         if (existing.quantity + quantity > product.stock) {
-          alert(`RN0031: Quantidade solicitada excede o estoque disponível (${product.stock} un.).`)
+          alert(`Quantidade solicitada excede o estoque disponível (${product.stock} un.).`)
           return
         }
         existing.quantity += quantity

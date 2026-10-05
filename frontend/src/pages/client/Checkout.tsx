@@ -371,9 +371,9 @@ export const Checkout = () => {
     // --------------------------------------------------------------------------
           if (step === 2) {
       if (paymentMethod === 'Múltiplos Cartões' && remainingTotal > 0) {
-        // RN0034: Pagamento com mais de um cartão com valor mínimo de R$ 10,00 por cartão
+        // Pagamento com mais de um cartão com valor mínimo de R$ 10,00 por cartão
         if (cardAmount1 < 10 || cardAmount2 < 10) {
-          alert('RN0034: No pagamento com múltiplos cartões, o valor mínimo por cartão é de R$ 10,00.')
+          alert('No pagamento com múltiplos cartões, o valor mínimo por cartão é de R$ 10,00.')
           return
         }
 
@@ -417,7 +417,7 @@ export const Checkout = () => {
 
       const targetCoupon = availableCoupons.find((c) => c.id === couponId)
       
-      // RN0033: Apenas UM cupom promocional por compra (múltiplos cupons de troca são permitidos)
+      // Apenas UM cupom promocional por compra (múltiplos cupons de troca são permitidos)
       if (targetCoupon?.type === 'Promocional') {
         const hasPromoAlready = prev.some((id) => {
           const existing = availableCoupons.find((c) => c.id === id)
@@ -425,7 +425,7 @@ export const Checkout = () => {
         })
 
         if (hasPromoAlready) {
-          alert('RN0033: É permitido apenas 1 cupom promocional por compra. Você pode combinar com múltiplos cupons de troca.')
+          alert('É permitido apenas 1 cupom promocional por compra. Você pode combinar com múltiplos cupons de troca.')
           return prev
         }
       }
