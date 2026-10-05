@@ -64,7 +64,7 @@ describe('Fluxo do Cliente - Loja Pública [DRS_LES_1_2026]', () => {
 
     // 1. Preenche Dados Pessoais Obrigatórios (RN0026)
     cy.get('input[placeholder="Ex: João da Silva"]').type(clienteLoja.name, { delay: TYPING_SPEED })
-    cy.get('input[placeholder="000.000.000-00"]').last().type(clienteLoja.cpf, { delay: TYPING_SPEED })
+    cy.get('input[placeholder="000.000.000-00"]').last().type(clienteLoja.cpf.replace(/\D/g, ''), { delay: TYPING_SPEED })
     cy.get('input[placeholder="(00) 00000-0000"]').type(clienteLoja.phone, { delay: TYPING_SPEED })
     cy.get('input[placeholder="seu.email@exemplo.com"]').type(clienteLoja.email, { delay: TYPING_SPEED })
     cy.wait(PAUSE_TIME)
@@ -101,7 +101,7 @@ describe('Fluxo do Cliente - Loja Pública [DRS_LES_1_2026]', () => {
   // ----------------------------------------------------------------------------
   it('[RF0022 | RNF0034] 2. Deve atualizar as informações cadastrais do cliente em Minha Conta', () => {
     // Busca o cliente recém-cadastrado no PostgreSQL pelo CPF para carregar seu ID real
-    cy.request('GET', `http://localhost:3001/api/clientes/cpf/${clienteLoja.cpf}`).then((response) => {
+    cy.request('GET', `http://localhost:3001/api/clientes/cpf/${clienteLoja.cpf.replace(/\D/g, '')}`).then((response) => {
       const dbCustomer = response.body
       cy.window().then((win) => {
         win.localStorage.setItem('logged-customer', JSON.stringify(dbCustomer))
@@ -139,7 +139,7 @@ describe('Fluxo do Cliente - Loja Pública [DRS_LES_1_2026]', () => {
     cy.wait(PAUSE_TIME)
 
     // Digita CPF no painel esquerdo "Já sou cliente"
-    cy.get('input[placeholder="000.000.000-00"]').first().type(clienteLoja.cpf, { delay: TYPING_SPEED })
+    cy.get('input[placeholder="000.000.000-00"]').first().type(clienteLoja.cpf.replace(/\D/g, ''), { delay: TYPING_SPEED })
     cy.wait(PAUSE_TIME)
 
     // Clica em Localizar Conta
