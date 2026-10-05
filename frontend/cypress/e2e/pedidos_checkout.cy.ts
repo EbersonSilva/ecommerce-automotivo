@@ -40,6 +40,13 @@ describe('Módulo de Criação de Pedidos [DRS_LES_1_2026]', () => {
       failOnStatusCode: false
     })
 
+    // Restaura o estoque original dos produtos no PostgreSQL
+    cy.request({
+      method: 'POST',
+      url: 'http://localhost:3001/api/produtos/reset',
+      failOnStatusCode: false
+    })
+
     // Inicializa a sessão do cliente autenticado e limpa o carrinho
     cy.window().then((win) => {
       win.localStorage.setItem('logged-customer', JSON.stringify(clientePadrao))
@@ -58,9 +65,13 @@ describe('Módulo de Criação de Pedidos [DRS_LES_1_2026]', () => {
     // 1. Adiciona o primeiro produto ao carrinho
     cy.contains('.group', 'Pastilha de Freio').find('button').click()
     cy.wait(PAUSE_TIME)
+    cy.get('[data-testid="modal-ok-btn"]').click()
+    cy.wait(PAUSE_TIME)
 
     // 2. Adiciona o segundo produto ao carrinho
     cy.contains('.group', 'Filtro de Óleo').find('button').click()
+    cy.wait(PAUSE_TIME)
+    cy.get('[data-testid="modal-ok-btn"]').click()
     cy.wait(PAUSE_TIME)
 
     // 3. Acessa o carrinho e verifica que contém os 2 itens diferentes
@@ -74,20 +85,18 @@ describe('Módulo de Criação de Pedidos [DRS_LES_1_2026]', () => {
     cy.contains('.bg-slate-900\\/40', 'Pastilha de Freio').contains('button', '+').click()
     cy.wait(PAUSE_TIME)
 
-    // 5. Validação da RN0031: Alerta ao tentar exceder estoque disponível
-    const stub = cy.stub()
-    cy.on('window:alert', stub)
-
+    // 5. Validação da RN0031: Alerta em Modal ao tentar exceder estoque disponível
     // Filtro de Óleo possui estoque 4 un. Incrementa até ultrapassar:
     cy.contains('.bg-slate-900\\/40', 'Filtro de Óleo').contains('button', '+').click()
     cy.contains('.bg-slate-900\\/40', 'Filtro de Óleo').contains('button', '+').click()
     cy.contains('.bg-slate-900\\/40', 'Filtro de Óleo').contains('button', '+').click()
     cy.contains('.bg-slate-900\\/40', 'Filtro de Óleo').contains('button', '+').click()
+    cy.wait(PAUSE_TIME)
 
-    cy.wait(PAUSE_TIME).then(() => {
-      // Verifica se o alerta foi disparado com a mensagem da RN0031
-      expect(stub).to.be.calledWithMatch(/RN0031/)
-    })
+    // Valida que o Modal de Regra de Negócio (RN0031) apareceu e clica em OK
+    cy.contains('RN0031').should('be.visible')
+    cy.get('[data-testid="modal-ok-btn"]').click()
+    cy.wait(PAUSE_TIME)
   })
 
   // ----------------------------------------------------------------------------
@@ -98,6 +107,9 @@ describe('Módulo de Criação de Pedidos [DRS_LES_1_2026]', () => {
     // 1. Adiciona item ao carrinho e vai ao checkout
     cy.visit('/produtos')
     cy.contains('.group', 'Pastilha de Freio').find('button').click()
+    cy.wait(PAUSE_TIME)
+    cy.get('[data-testid="modal-ok-btn"]').click()
+
     cy.visit('/carrinho')
     cy.wait(PAUSE_TIME)
     cy.contains('button', 'Ir para o Checkout').click()
@@ -134,6 +146,9 @@ describe('Módulo de Criação de Pedidos [DRS_LES_1_2026]', () => {
   it('[RF0035 | RN0023 | RF0036 | RN0024 | RN0025] 3. Compra cadastrando novo endereço e novo cartão durante o checkout, incorporados ao perfil', () => {
     cy.visit('/produtos')
     cy.contains('.group', 'Pastilha de Freio').find('button').click()
+    cy.wait(PAUSE_TIME)
+    cy.get('[data-testid="modal-ok-btn"]').click()
+
     cy.visit('/carrinho')
     cy.contains('button', 'Ir para o Checkout').click()
 
@@ -182,26 +197,29 @@ describe('Módulo de Criação de Pedidos [DRS_LES_1_2026]', () => {
   it('[RF0037 | RN0034] 4. Pagamento com múltiplos cartões com validação do valor mínimo de R$ 10,00 por cartão', () => {
     cy.visit('/produtos')
     cy.contains('.group', 'Pastilha de Freio').find('button').click()
+    cy.wait(PAUSE_TIME)
+    cy.get('[data-testid="modal-ok-btn"]').click()
+
     cy.visit('/carrinho')
+    cy.wait(PAUSE_TIME)
     cy.contains('button', 'Ir para o Checkout').click()
+    cy.wait(PAUSE_TIME)
     cy.contains('button', 'Prosseguir para Pagamento').click()
+    cy.wait(PAUSE_TIME)
 
     // 1. Seleciona método Múltiplos Cartões
-    cy.wait(PAUSE_TIME)
     cy.get('select').first().select('Múltiplos Cartões')
     cy.wait(PAUSE_TIME)
 
     // 2. Tenta colocar R$ 5,00 no Cartão 1 (Abaixo do mínimo de R$ 10,00 exigido na RN0034)
     cy.get('input[placeholder="0.00"]').first().clear().type('5.00', { delay: TYPING_SPEED })
-
-    const alertStub = cy.stub()
-    cy.on('window:alert', alertStub)
-
     cy.contains('button', 'Revisar Pedido').click()
-    cy.wait(PAUSE_TIME).then(() => {
-      // Valida que o alerta da RN0034 foi acionado
-      expect(alertStub).to.be.calledWithMatch(/RN0034/)
-    })
+    cy.wait(PAUSE_TIME)
+
+    // Valida o Modal de RN0034 e clica no botão OK do Modal
+    cy.contains('RN0034').should('be.visible')
+    cy.get('[data-testid="modal-ok-btn"]').click()
+    cy.wait(PAUSE_TIME)
 
     // 3. Corrige o valor para R$ 100,00 no Cartão 1 e divide corretamente
     cy.get('input[placeholder="0.00"]').first().clear().type('100.00', { delay: TYPING_SPEED })
@@ -229,24 +247,29 @@ describe('Módulo de Criação de Pedidos [DRS_LES_1_2026]', () => {
   it('[RN0033 | RN0035] 5. Pagamento com cartão e cupons, incluindo permissão de valor < R$ 10 no cartão e limite de 1 cupom promocional', () => {
     cy.visit('/produtos')
     cy.contains('.group', 'Filtro de Óleo').find('button').click()
+    cy.wait(PAUSE_TIME)
+    cy.get('[data-testid="modal-ok-btn"]').click()
+
     cy.visit('/carrinho')
+    cy.wait(PAUSE_TIME)
     cy.contains('button', 'Ir para o Checkout').click()
+    cy.wait(PAUSE_TIME)
     cy.contains('button', 'Prosseguir para Pagamento').click()
     cy.wait(PAUSE_TIME)
 
     // 1. Validação da RN0033: Tentar marcar 2 cupons promocionais
-    const alertPromoStub = cy.stub()
-    cy.on('window:alert', alertPromoStub)
-
     // Clica no primeiro cupom promocional
     cy.contains('BEMVINDO10').click()
     cy.wait(PAUSE_TIME)
 
-    // Tenta clicar no segundo cupom promocional (deve bloquear conforme RN0033)
+    // Tenta clicar no segundo cupom promocional (deve abrir o modal conforme RN0033)
     cy.contains('PROMO20').click()
-    cy.wait(PAUSE_TIME).then(() => {
-      expect(alertPromoStub).to.be.calledWithMatch(/RN0033/)
-    })
+    cy.wait(PAUSE_TIME)
+
+    // Valida o Modal de RN0033 e clica no botão OK do Modal
+    cy.contains('RN0033').should('be.visible')
+    cy.get('[data-testid="modal-ok-btn"]').click()
+    cy.wait(PAUSE_TIME)
 
     // 2. Aplica cupom de troca de R$ 50,00 + cupom promocional de R$ 10,00
     cy.contains('TROCA-50').click()
@@ -268,8 +291,13 @@ describe('Módulo de Criação de Pedidos [DRS_LES_1_2026]', () => {
   it('[RN0036] 6. Uso de cupons cujo valor supera a compra com emissão automática de novo cupom de troca com a diferença', () => {
     cy.visit('/produtos')
     cy.contains('.group', 'Filtro de Óleo').find('button').click()
+    cy.wait(PAUSE_TIME)
+    cy.get('[data-testid="modal-ok-btn"]').click()
+
     cy.visit('/carrinho')
+    cy.wait(PAUSE_TIME)
     cy.contains('button', 'Ir para o Checkout').click()
+    cy.wait(PAUSE_TIME)
     cy.contains('button', 'Prosseguir para Pagamento').click()
     cy.wait(PAUSE_TIME)
 
@@ -299,9 +327,15 @@ describe('Módulo de Criação de Pedidos [DRS_LES_1_2026]', () => {
     // 1. Cria um pedido com sucesso
     cy.visit('/produtos')
     cy.contains('.group', 'Pastilha de Freio').find('button').click()
+    cy.wait(PAUSE_TIME)
+    cy.get('[data-testid="modal-ok-btn"]').click()
+
     cy.visit('/carrinho')
+    cy.wait(PAUSE_TIME)
     cy.contains('button', 'Ir para o Checkout').click()
+    cy.wait(PAUSE_TIME)
     cy.contains('button', 'Prosseguir para Pagamento').click()
+    cy.wait(PAUSE_TIME)
     cy.get('select').first().select('Cartão de Crédito')
     cy.contains('button', 'Revisar Pedido').click()
     cy.contains('button', 'Confirmar e Finalizar Pedido').click()

@@ -27,43 +27,47 @@ import AdminOrders from './pages/admin/Orders'
 import Exchanges from './pages/admin/Exchanges'
 import Reports from './pages/admin/Reports'
 
+import { AlertModalProvider } from './context/AlertModalContext'
+
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Client Storefront Routes */}
-        <Route path="/" element={<ClientLayout />}>
-          <Route index element={<Home />} />
-          <Route path="produtos" element={<ProductList />} />
-          <Route path="produtos/:id" element={<ProductDetail />} />
-          <Route path="carrinho" element={<Cart />} />
-          <Route path="checkout" element={<Checkout />} />
-          <Route path="pedidos" element={<ClientOrders />} />
-          <Route path="pedidos/:id" element={<ClientOrderDetail />} />
-          <Route path="minha-conta" element={<Account />} />
-          <Route path="cadastro" element={<Register />} />
-        </Route>
+    <AlertModalProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Client Storefront Routes */}
+          <Route path="/" element={<ClientLayout />}>
+            <Route index element={<Home />} />
+            <Route path="produtos" element={<ProductList />} />
+            <Route path="produtos/:id" element={<ProductDetail />} />
+            <Route path="carrinho" element={<Cart />} />
+            <Route path="checkout" element={<Checkout />} />
+            <Route path="pedidos" element={<ClientOrders />} />
+            <Route path="pedidos/:id" element={<ClientOrderDetail />} />
+            <Route path="minha-conta" element={<Account />} />
+            <Route path="cadastro" element={<Register />} />
+          </Route>
 
-        {/* Administrative Backend Routes */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="clientes" element={<Customers />} />
-          <Route path="clientes/novo" element={<CustomerForm />} />
-          <Route path="clientes/:id" element={<CustomerDetail />} />
-          <Route path="clientes/:id/editar" element={<CustomerForm />} />
-          <Route path="produtos" element={<Products />} />
-          <Route path="produtos/novo" element={<ProductForm />} />
-          <Route path="produtos/:id/editar" element={<ProductForm />} />
-          <Route path="estoque" element={<Stock />} />
-          <Route path="pedidos" element={<AdminOrders />} />
-          <Route path="trocas" element={<Exchanges />} />
-          <Route path="relatorios" element={<Reports />} />
-        </Route>
+          {/* Administrative Backend Routes */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="clientes" element={<Customers />} />
+            <Route path="clientes/novo" element={<CustomerForm />} />
+            <Route path="clientes/:id" element={<CustomerDetail />} />
+            <Route path="clientes/:id/editar" element={<CustomerForm />} />
+            <Route path="produtos" element={<Products />} />
+            <Route path="produtos/novo" element={<ProductForm />} />
+            <Route path="produtos/:id/editar" element={<ProductForm />} />
+            <Route path="estoque" element={<Stock />} />
+            <Route path="pedidos" element={<AdminOrders />} />
+            <Route path="trocas" element={<Exchanges />} />
+            <Route path="relatorios" element={<Reports />} />
+          </Route>
 
-        {/* Fallback Catch All */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Fallback Catch All */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AlertModalProvider>
   )
 }
 

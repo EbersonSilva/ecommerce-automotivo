@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/Button'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Check, CreditCard as CardIcon, MapPin, ClipboardCheck, PartyPopper, Ticket, Plus, CheckCircle2 } from 'lucide-react'
+import type { Address, Coupon, CreditCard } from '../../mock/mockData'
 import { getCustomerAddresses, createCustomerAddress } from '../../services/addressService'
 import { getCustomerCards, createCustomerCard } from '../../services/cardService'
 import { getCustomerCoupons, createCustomerCoupon, useCouponByCode } from '../../services/couponService'
@@ -93,7 +94,7 @@ export const Checkout = () => {
 
    // Cards Database (PostgreSQL)
   const [savedCardsList, setSavedCardsList] = useState<CreditCard[]>([])
-  const [loadingCards, setLoadingCards] = useState(false)
+  const [, setLoadingCards] = useState(false)
 
   // Card 1 state
   const [selectedCardId1, setSelectedCardId1] = useState<string | number>('new')

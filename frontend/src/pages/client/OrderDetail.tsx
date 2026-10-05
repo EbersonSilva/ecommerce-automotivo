@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import type { Order } from '../../mock/mockData'
-import { getOrderById, updateOrderStatus as updateOrderStatusApi } from '../../services/orderService'
+import { getOrderById } from '../../services/orderService'
 import { Breadcrumb } from '../../components/ui/Breadcrumb'
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'

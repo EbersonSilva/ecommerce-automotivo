@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { getAllProducts, getProductById } from '../controllers/productController.js'
+import { getAllProducts, getProductById, resetProductsStock } from '../controllers/productController.js'
 
 const router = Router()
 
@@ -7,7 +7,11 @@ const router = Router()
 // GET /api/produtos
 router.get('/', getAllProducts)
 
-// 2. Buscar produto por ID ou código
+// 2. Resetar estoque para testes E2E
+// POST /api/produtos/reset
+router.post('/reset', resetProductsStock)
+
+// 3. Buscar produto por ID ou código
 // GET /api/produtos/:id
 router.get('/:id', getProductById)
 

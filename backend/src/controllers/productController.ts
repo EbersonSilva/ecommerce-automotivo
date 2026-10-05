@@ -81,3 +81,26 @@ export const getProductById = async (req: Request, res: Response): Promise<void>
     res.status(500).json({ error: 'Erro ao consultar produto no banco de dados.' })
   }
 }
+
+/**
+ * ==============================================================================
+ * 3. RESTAURAR ESTOQUE DOS PRODUTOS (POST /api/produtos/reset)
+ * Para testes E2E e demonstração com Cypress
+ * ==============================================================================
+ */
+export const resetProductsStock = async (req: Request, res: Response): Promise<void> => {
+  try {
+    await query(`
+      UPDATE produtos SET estoque = 25 WHERE codigo = 'PEC-0001' OR id = 1;
+      UPDATE produtos SET estoque = 4 WHERE codigo = 'PEC-0002' OR id = 2;
+      UPDATE produtos SET estoque = 15 WHERE codigo = 'PEC-0003' OR id = 3;
+      UPDATE produtos SET estoque = 8 WHERE codigo = 'PEC-0004' OR id = 4;
+      UPDATE produtos SET estoque = 30 WHERE codigo = 'PEC-0005' OR id = 5;
+      UPDATE produtos SET estoque = 6 WHERE codigo = 'PEC-0006' OR id = 6;
+    `)
+    res.status(200).json({ message: 'Estoque restaurado para testes!' })
+  } catch (error: any) {
+    console.error('❌ Erro ao resetar estoque:', error)
+    res.status(500).json({ error: 'Erro ao resetar estoque.' })
+  }
+}

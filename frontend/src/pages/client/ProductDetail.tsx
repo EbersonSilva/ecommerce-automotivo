@@ -5,7 +5,7 @@ import { getProductById } from '../../services/productService'
 import { Breadcrumb } from '../../components/ui/Breadcrumb'
 import { Badge } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
-import { ShoppingCart, ArrowLeft, CheckCircle2 } from 'lucide-react'
+import { ShoppingCart, ArrowLeft, CheckCircle2, Truck, Shield } from 'lucide-react'
 
 export const ProductDetail = () => {
   const { id } = useParams<{ id: string }>()

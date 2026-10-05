@@ -25,7 +25,7 @@ export const ProductList = () => {
 
   //Produtos direto do PostgreSQL
   const [productsList, setProductsList] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
+  const [, setLoading] = useState(true)
 
   //Carrega produtos do banco na montagem do componente
 

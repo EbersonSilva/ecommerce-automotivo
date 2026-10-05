@@ -10,7 +10,7 @@ import { Eye, ClipboardList } from 'lucide-react'
 
 export const Orders = () => {
   const [orders, setOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(false)
+  const [, setLoading] = useState(false)
 
   const loggedCustomerStr = localStorage.getItem('logged-customer')
   const currentCust = loggedCustomerStr ? JSON.parse(loggedCustomerStr) : null

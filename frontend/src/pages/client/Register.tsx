@@ -7,7 +7,7 @@ import { Select } from '../../components/ui/Select'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import {
-  ArrowLeft, UserPlus, Search, ShieldCheck, User, MapPin, Sparkles, CheckCircle2, Truck, Ticket
+  ArrowLeft, UserPlus, Search, ShieldCheck, User, MapPin, CheckCircle2, Truck, Ticket
 } from 'lucide-react'
 import { getCustomerByCpf, createCustomer } from '../../services/customerService'
 import { maskCPF, maskPhone, maskCEP, onlyNumbers } from '../../utils/inputMasks' // Importa a função de máscara de CPF
