@@ -8,6 +8,8 @@ import cardRoutes from './routes/cardRoutes.js'
 import couponRoutes from './routes/couponRoutes.js'
 import productRoutes from './routes/productRoutes.js'
 import orderRoutes from './routes/orderRoutes.js'
+import exchangeRoutes from './routes/exchangeRoutes.js'
+
 
 
 // Carrega variáveis do arquivo .env
@@ -24,7 +26,7 @@ app.use(express.json()) // Habilita o Express a receber dados no formato JSON (r
 app.get('/api/status', (req, res) => {
   res.json({
     status: 'online',
-    message: '🚀 Backend do E-commerce Automotivo está online!',
+    message: 'Backend do E-commerce Automotivo está online!',
     timestamp: new Date().toISOString()
   })
 })
@@ -35,13 +37,13 @@ app.get('/api/db-test', async (req, res) => {
     const result = await query('SELECT NOW() as "serverTime", current_database() as "databaseName"')
     res.json({
       status: 'success',
-      message: '✅ Conexão com o banco PostgreSQL está funcionando perfeitamente!',
+      message: 'Conexão com o banco PostgreSQL está funcionando perfeitamente!',
       data: result.rows[0]
     })
   } catch (error: any) {
     res.status(500).json({
       status: 'error',
-      message: '❌ Falha ao conectar ao banco de dados PostgreSQL.',
+      message: 'Falha ao conectar ao banco de dados PostgreSQL.',
       error: error.message
     })
   }
@@ -54,15 +56,18 @@ app.use('/api/clientes/:clienteId/cartoes', cardRoutes)
 app.use('/api/clientes/:clienteId/cupons', couponRoutes)
 app.use('/api/cupons', couponRoutes)
 app.use('/api/produtos', productRoutes)
+app.use('/api/trocas', exchangeRoutes)
+app.use('/api/clientes/:clienteId/trocas', exchangeRoutes)
+
 app.use('/api', orderRoutes)
 
 
 // INICIALIZAÇÃO DO SERVIDOR
 app.listen(PORT, () => {
   console.log(`=======================================================`)
-  console.log(`🚀 Servidor rodando em http://localhost:${PORT}`)
-  console.log(`🔗 Teste do Banco:   http://localhost:${PORT}/api/db-test`)
-  console.log(`👥 Rota de Clientes: http://localhost:${PORT}/api/clientes`)
+  console.log(`Servidor rodando em http://localhost:${PORT}`)
+  console.log(`Teste do Banco:   http://localhost:${PORT}/api/db-test`)
+  console.log(`Rota de Clientes: http://localhost:${PORT}/api/clientes`)
   console.log(`=======================================================`)
 })
 

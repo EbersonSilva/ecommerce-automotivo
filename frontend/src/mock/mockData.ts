@@ -53,15 +53,17 @@ export interface OrderItem {
 
 export interface Order {
   id: string
+  code?: string
   customerId: string
   customerName: string
   date: string
   total: number
-  status: 'EM ABERTO' | 'EM PROCESSAMENTO' | 'PAGAMENTO REALIZADO' | 'EM TRÂNSITO' | 'ENTREGUE' | 'CANCELADO'
+  status: 'EM ABERTO' | 'EM PROCESSAMENTO' | 'PAGAMENTO REALIZADO' | 'PAGAMENTO APROVADO' | 'PAGAMENTO RECUSADO' | 'EM TRÂNSITO' | 'EM TRANSPORTE' | 'ENTREGUE' | 'CANCELADO' | 'TROCA SOLICITADA'
   items: OrderItem[]
   paymentMethod: string
   shippingAddress: string
 }
+
 
 export interface Exchange {
   id: string

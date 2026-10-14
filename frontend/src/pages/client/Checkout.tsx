@@ -8,7 +8,7 @@ import { Check, CreditCard as CardIcon, MapPin, ClipboardCheck, PartyPopper, Tic
 import type { Address, Coupon, CreditCard } from '../../mock/mockData'
 import { getCustomerAddresses, createCustomerAddress } from '../../services/addressService'
 import { getCustomerCards, createCustomerCard } from '../../services/cardService'
-import { getCustomerCoupons, createCustomerCoupon, useCouponByCode } from '../../services/couponService'
+import { getCustomerCoupons, createCustomerCoupon, markCouponAsUsed } from '../../services/couponService'
 import { createOrder } from '../../services/orderService'
 import { maskCEP, maskCardNumber, maskCardExpiry, maskCVV, onlyNumbers } from '../../utils/inputMasks'
 
@@ -450,7 +450,7 @@ export const Checkout = () => {
       for (const couponId of selectedCouponIds) {
         const found = availableCoupons.find((c) => c.id === couponId)
         if (found) {
-          useCouponByCode(found.code).catch((err) => console.warn('⚠️ Erro ao marcar cupom como utilizado:', err))
+          markCouponAsUsed(found.code).catch((err) => console.warn('⚠️ Erro ao marcar cupom como utilizado:', err))
         }
       }
 

@@ -6,7 +6,7 @@ import { Select } from '../../components/ui/Select'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import { User, MapPin, Save, Ticket, RefreshCcw, Truck, Plus, CheckCircle2, Package, Eye, Calendar, Pencil, Trash2, CreditCard as CardIcon, Star } from 'lucide-react'
-import { mockExchanges, mockCustomers, type Coupon, type Exchange, type Customer, type Address, type Order, type CreditCard } from '../../mock/mockData'
+import { mockCustomers, type Coupon, type Exchange, type Customer, type Address, type Order, type CreditCard } from '../../mock/mockData'
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
 import { Table } from '../../components/ui/Table'
 import { updateCustomer } from '../../services/customerService'
@@ -14,6 +14,7 @@ import { getCustomerAddresses, createCustomerAddress, updateCustomerAddress, del
 import { getCustomerCards, createCustomerCard, setPreferredCustomerCard, deleteCustomerCard } from '../../services/cardService'
 import { getCustomerOrders } from '../../services/orderService'
 import { getCustomerCoupons } from '../../services/couponService'
+import { getCustomerExchanges, updateExchangeStatus } from '../../services/exchangeService'
 import { maskPhone, maskCPF, maskCEP, onlyNumbers, maskCardNumber, maskCardExpiry, maskCVV } from '../../utils/inputMasks'
 
 
@@ -146,21 +147,20 @@ export const Account = () => {
         setCoupons(filteredCoupons)
       }
 
-      // 3. Trocas e Devoluções do Cliente
-      const savedExchanges = localStorage.getItem('custom-exchanges')
-      let customExchanges = savedExchanges ? JSON.parse(savedExchanges) : []
-      customExchanges = customExchanges.map((ex: any) => ({
-        ...ex,
-        status: ex.status === 'Pendente' ? 'TROCA SOLICITADA' : ex.status
-      }))
-      const filteredExchanges = customExchanges.filter((ex: any) => String(ex.customerId) === String(currentCust.id))
-      setExchanges(filteredExchanges)
+      // 3. Trocas e Devoluções do Cliente (PostgreSQL)
+      try {
+        const dbExchanges = await getCustomerExchanges(currentCust.id)
+        setExchanges(dbExchanges)
+      } catch {
+        setExchanges([])
+      }
     } catch {
       setOrders([])
       setCoupons([])
       setExchanges([])
     }
   }
+
 
   const loadAddresses = async (customerId: string) => {
     setLoadingAddresses(true)
@@ -343,7 +343,7 @@ export const Account = () => {
     }
   }
 
-  const handleDispatchItem = (exchangeId: string) => {
+    const handleDispatchItem = async (exchangeId: string) => {
     const trackingCode = prompt('Digite o código de rastreamento do envio da devolução:')
     if (trackingCode === null) return
 
@@ -353,42 +353,16 @@ export const Account = () => {
     }
 
     try {
-      const savedExchanges = localStorage.getItem('custom-exchanges')
-      const customList: Exchange[] = savedExchanges ? JSON.parse(savedExchanges) : []
-
-      const foundInCustom = customList.find((ex) => ex.id === exchangeId)
-
-      let updatedExchanges: Exchange[]
-      if (foundInCustom) {
-        const updatedCustom = customList.map((ex) => {
-          if (ex.id === exchangeId) {
-            return { ...ex, status: 'ITEM ENVIADO' as const }
-          }
-          return ex
-        })
-        localStorage.setItem('custom-exchanges', JSON.stringify(updatedCustom))
-        const customExchangeIds = updatedCustom.map((ex) => ex.id)
-        updatedExchanges = [...updatedCustom, ...mockExchanges.filter(ex => !customExchangeIds.includes(ex.id))]
-      } else {
-        const mockItem = mockExchanges.find(ex => ex.id === exchangeId)
-        if (mockItem) {
-          const newItem = { ...mockItem, status: 'ITEM ENVIADO' as const }
-          const updatedCustom = [newItem, ...customList]
-          localStorage.setItem('custom-exchanges', JSON.stringify(updatedCustom))
-          const customExchangeIds = updatedCustom.map((ex) => ex.id)
-          updatedExchanges = [...updatedCustom, ...mockExchanges.filter(ex => !customExchangeIds.includes(ex.id))]
-        } else {
-          updatedExchanges = exchanges
-        }
-      }
-
-      setExchanges(updatedExchanges)
+      await updateExchangeStatus(exchangeId, 'ITEM ENVIADO')
       alert('Item despachado com sucesso! O status da devolução foi atualizado para "ITEM ENVIADO".')
-    } catch (err) {
-      console.error(err)
-      alert('Falha ao despachar o item.')
+      if (loggedCustomer) {
+        loadData(loggedCustomer)
+      }
+    } catch (err: any) {
+      alert(err.message || 'Falha ao despachar o item.')
     }
   }
+
 
   // Salvar Novo Cartão (RF0027, RN0024, RN0025)
   const handleSaveCard = async (e: React.FormEvent) => {

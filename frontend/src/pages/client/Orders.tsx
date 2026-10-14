@@ -44,9 +44,11 @@ export const Orders = () => {
     }
   }
 
-  useEffect(() => {
+    useEffect(() => {
     loadOrders()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
 
   if (!currentCust) {
     return (

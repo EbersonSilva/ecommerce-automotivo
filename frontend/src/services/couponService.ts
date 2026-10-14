@@ -51,7 +51,7 @@ export async function createCustomerCoupon(
 }
 
 // 3. MARCAR CUPOM COMO UTILIZADO
-export async function useCouponByCode(code: string): Promise<void> {
+export async function markCouponAsUsed(code: string): Promise<void> {
   const response = await fetch(`${API_URL}/cupons/${code}/utilizar`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' }
@@ -62,3 +62,4 @@ export async function useCouponByCode(code: string): Promise<void> {
     throw new Error(data.error || 'Falha ao marcar cupom como utilizado.')
   }
 }
+

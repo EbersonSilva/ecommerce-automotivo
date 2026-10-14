@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import type { Order } from '../../mock/mockData'
-import { getOrderById } from '../../services/orderService'
+import { getOrderById, updateOrderStatus } from '../../services/orderService'
+import { createExchange } from '../../services/exchangeService'
 import { Breadcrumb } from '../../components/ui/Breadcrumb'
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
 import { Button } from '../../components/ui/Button'
@@ -13,76 +14,57 @@ import { ArrowLeft, MapPin, CreditCard, RefreshCcw, Calendar, Receipt, XCircle, 
 export const OrderDetail = () => {
   const { id } = useParams<{ id: string }>()
   const [order, setOrder] = useState<Order | null>(null)
+  const [loading, setLoading] = useState(false)
   
   // Exchange Request State
   const [isExchangeModalOpen, setIsExchangeModalOpen] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState('')
   const [exchangeReason, setExchangeReason] = useState('')
 
-  useEffect(() => {
+    useEffect(() => {
     if (!id) return
-
+    setLoading(true)
     getOrderById(id)
       .then((data) => {
         if (data && data.id) {
           setOrder(data)
         }
       })
-      .catch(() => {
-        // Fallback para cache local
-        try {
-          const savedCustom = localStorage.getItem('custom-orders')
-          const customList = savedCustom ? JSON.parse(savedCustom) : []
-          const found = customList.find((o: Order) => o.id === id || String(o.id) === String(id))
-          setOrder(found || null)
-        } catch {
-          setOrder(null)
-        }
+      .catch((err) => {
+        console.error('Erro ao buscar pedido:', err)
+      })
+      .finally(() => {
+        setLoading(false)
       })
   }, [id])
 
 
-  const updateOrderStatus = (nextStatus: Order['status']) => {
+  const handleUpdateStatus = async (nextStatus: Order['status'], successMsg: string) => {
     if (!order) return
     try {
-      const savedCustom = localStorage.getItem('custom-orders')
-      const customList: Order[] = savedCustom ? JSON.parse(savedCustom) : []
-      
-      const foundInCustomIndex = customList.findIndex((o) => o.id === order.id)
-      let updatedList: Order[]
-      
-      if (foundInCustomIndex > -1) {
-        customList[foundInCustomIndex].status = nextStatus
-        updatedList = [...customList]
-      } else {
-        const updatedOrder = { ...order, status: nextStatus }
-        updatedList = [updatedOrder, ...customList]
-      }
-      
-      localStorage.setItem('custom-orders', JSON.stringify(updatedList))
+      await updateOrderStatus(order.id, nextStatus)
       setOrder({ ...order, status: nextStatus })
-    } catch (err) {
+      alert(successMsg)
+    } catch (err: any) {
       console.error(err)
-      alert('Falha ao atualizar o status do pedido.')
+      alert(err.message || 'Falha ao atualizar o status do pedido.')
     }
   }
 
-  const handleCancelOrder = () => {
+  const handleCancelOrder = async () => {
     if (confirm('Tem certeza de que deseja cancelar este pedido?')) {
-      updateOrderStatus('CANCELADO')
-      alert('Pedido cancelado com sucesso!')
+      await handleUpdateStatus('CANCELADO', 'Pedido cancelado com sucesso!')
     }
   }
 
-  const handleConfirmReceipt = () => {
+  const handleConfirmReceipt = async () => {
     if (confirm('Deseja confirmar o recebimento deste pedido?')) {
-      updateOrderStatus('ENTREGUE')
-      alert('Recebimento confirmado! O status do pedido foi atualizado para ENTREGUE.')
+      await handleUpdateStatus('ENTREGUE', 'Recebimento confirmado! O status do pedido foi atualizado para ENTREGUE.')
     }
   }
 
   const productOptions = useMemo(() => {
-    if (!order) return []
+    if (!order || !order.items) return []
     return order.items.map((item) => ({
       value: item.name,
       label: `${item.name} (${item.quantity}x)`
@@ -94,6 +76,10 @@ export const OrderDetail = () => {
       setSelectedProduct(productOptions[0].value)
     }
   }, [productOptions])
+
+  if (loading) {
+    return <div className="text-center py-20 text-slate-400">Carregando detalhes do pedido...</div>
+  }
 
   if (!order) {
     return (
@@ -110,7 +96,7 @@ export const OrderDetail = () => {
     )
   }
 
-  const handleRequestExchange = (e: React.FormEvent) => {
+  const handleRequestExchange = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!exchangeReason.trim()) {
       alert('Favor preencher o motivo da solicitação de troca.')
@@ -118,30 +104,26 @@ export const OrderDetail = () => {
     }
 
     try {
-      const savedExchanges = localStorage.getItem('custom-exchanges')
-      const exchangeList = savedExchanges ? JSON.parse(savedExchanges) : []
-      
-      const newExchange = {
-        id: `TRO-${Math.floor(5000 + Math.random() * 9000)}`,
-        orderId: order.id,
-        customerId: order.customerId,
-        customerName: order.customerName || 'Cliente Logado',
-        product: selectedProduct,
-        requestDate: new Date().toISOString().split('T')[0],
-        reason: exchangeReason,
-        status: 'TROCA SOLICITADA'
-      }
+      const itemSelected = order.items.find(i => i.name === selectedProduct)
+      const itemPrice = itemSelected ? (itemSelected.price * itemSelected.quantity) : 0
 
-      exchangeList.unshift(newExchange)
-      localStorage.setItem('custom-exchanges', JSON.stringify(exchangeList))
-      
+      await createExchange({
+        pedidoId: order.id,
+        pedidoCodigo: (order as any).code || order.id,
+        clienteId: order.customerId || 1,
+        clienteNome: order.customerName || 'Cliente',
+        produtoNome: selectedProduct,
+        valorTroca: itemPrice,
+        motivo: exchangeReason
+      })
+
+      setOrder({ ...order, status: 'TROCA SOLICITADA' })
       setExchangeReason('')
-      
-      alert('Solicitação de troca enviada com sucesso!')
       setIsExchangeModalOpen(false)
-    } catch (err) {
+      alert('Solicitação de troca enviada com sucesso!')
+    } catch (err: any) {
       console.error(err)
-      alert('Falha ao processar solicitação de troca.')
+      alert(err.message || 'Falha ao processar solicitação de troca.')
     }
   }
 
@@ -156,7 +138,7 @@ export const OrderDetail = () => {
 
       <Link 
         to="/pedidos" 
-        className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-350 uppercase tracking-widest transition-colors mb-2"
+        className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-300 uppercase tracking-widest transition-colors mb-2"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         Voltar para a Lista
@@ -165,13 +147,13 @@ export const OrderDetail = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <span className="text-xs font-mono bg-slate-900 border border-slate-800 text-indigo-400 px-3.5 py-1.5 rounded-lg">
-            {order.id}
+            {(order as any).code || order.id}
           </span>
           <h1 className="text-3xl font-black text-white tracking-tight mt-3">Detalhes da Compra</h1>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {(order.status === 'EM ABERTO' || order.status === 'EM PROCESSAMENTO') && (
+          {(order.status === 'EM PROCESSAMENTO' || (order.status as any) === 'EM ABERTO') && (
             <Button 
               onClick={handleCancelOrder}
               variant="danger" 
@@ -182,10 +164,10 @@ export const OrderDetail = () => {
             </Button>
           )}
 
-          {order.status === 'EM TRÂNSITO' && (
+          {(order.status === 'EM TRANSPORTE' || (order.status as any) === 'EM TRÂNSITO') && (
             <Button 
               onClick={handleConfirmReceipt}
-              className="gap-2 text-xs font-bold bg-emerald-605 border-emerald-700 hover:bg-emerald-600 hover:border-emerald-700 text-white"
+              className="gap-2 text-xs font-bold bg-emerald-600 border-emerald-700 hover:bg-emerald-500 text-white"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               Confirmar Recebimento
@@ -209,17 +191,17 @@ export const OrderDetail = () => {
         {/* Left Side: Order breakdown list */}
         <div className="md:col-span-2 flex flex-col gap-6">
           <div className="bg-slate-900/40 border border-slate-900 p-6 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-4">
-            <h3 className="text-xs font-black text-slate-350 uppercase tracking-widest pb-3 border-b border-slate-800 flex items-center gap-2">
+            <h3 className="text-xs font-black text-slate-300 uppercase tracking-widest pb-3 border-b border-slate-800 flex items-center gap-2">
               <Receipt className="w-4.5 h-4.5 text-indigo-400" />
               Peças Adquiridas
             </h3>
             
-            <div className="divide-y divide-slate-850">
-              {order.items.map((item, idx) => (
+            <div className="divide-y divide-slate-800">
+              {order.items && order.items.map((item, idx) => (
                 <div key={idx} className="py-4.5 flex justify-between items-center text-xs">
                   <div className="text-left">
                     <span className="text-slate-100 font-bold block text-sm">{item.name}</span>
-                    <span className="text-slate-550 block mt-1 font-mono">
+                    <span className="text-slate-500 block mt-1 font-mono">
                       Qtd: {item.quantity} x R$ {item.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -272,8 +254,7 @@ export const OrderDetail = () => {
               <CreditCard className="w-4 h-4 text-indigo-400" />
               Informações de Faturamento
             </h4>
-            <p className="text-slate-350">Forma de Pagamento: <strong>{order.paymentMethod}</strong></p>
-            <p className="text-slate-500 mt-2">Transação autorizada visualmente para homologação.</p>
+            <p className="text-slate-300">Forma de Pagamento: <strong>{order.paymentMethod}</strong></p>
           </div>
         </div>
       </div>

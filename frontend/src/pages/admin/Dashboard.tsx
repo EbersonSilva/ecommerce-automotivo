@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { mockProducts, mockCustomers, mockOrders } from '../../mock/mockData'
-import type { Order } from '../../mock/mockData'
+import type { Order, Customer, Product } from '../../mock/mockData'
+import { getAllOrders } from '../../services/orderService'
+import { getCustomers } from '../../services/customerService'
+import { getProducts } from '../../services/productService'
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
 import { 
   Users, 
@@ -9,51 +11,76 @@ import {
   Boxes, 
   TrendingUp, 
   ClipboardList,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react'
 
 export const Dashboard = () => {
-  const [totalOrders, setTotalOrders] = useState<Order[]>([])
-  
-  useEffect(() => {
+  const [orders, setOrders] = useState<Order[]>([])
+  const [customers, setCustomers] = useState<Customer[]>([])
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const loadDashboardData = async () => {
     try {
-      const savedCustom = localStorage.getItem('custom-orders')
-      const customList = savedCustom ? JSON.parse(savedCustom) : []
-      setTotalOrders([...customList, ...mockOrders])
-    } catch {
-      setTotalOrders(mockOrders)
+      setLoading(true)
+      const [ordersData, customersData, productsData] = await Promise.all([
+        getAllOrders().catch(() => []),
+        getCustomers().catch(() => []),
+        getProducts().catch(() => [])
+      ])
+      setOrders(ordersData)
+      setCustomers(customersData)
+      setProducts(productsData)
+    } catch (err) {
+      console.error('Erro ao carregar métricas do dashboard:', err)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
+    loadDashboardData()
   }, [])
 
-  // KPI Calculations
-  const clientCount = mockCustomers.length
-  const productCount = mockProducts.length
+  // Cálculos de KPI baseados nos dados reais do PostgreSQL
+  const clientCount = customers.length
+  const productCount = products.length
+  const totalStockItems = products.reduce((acc, p) => acc + (p.stock || 0), 0)
+  const lowStockItems = products.filter((p) => (p.stock || 0) <= (p.minStock || 0)).length
   
-  const totalStockItems = mockProducts.reduce((acc, p) => acc + p.stock, 0)
-  const lowStockItems = mockProducts.filter((p) => p.stock <= p.minStock).length
-  
-  const totalRevenue = totalOrders.reduce((acc, o) => {
-    if (o.status !== 'CANCELADO') return acc + o.total
+  const totalRevenue = orders.reduce((acc, o) => {
+    if (o.status !== 'CANCELADO') return acc + (o.total || 0)
     return acc
   }, 0)
 
-  // KPI Cards metadata
+  // Metadados dos Cards de Indicadores
   const cards = [
     { title: 'Total de Clientes', value: clientCount, icon: Users, color: 'from-blue-500 to-cyan-500' },
     { title: 'Total de Produtos', value: productCount, icon: ShoppingBag, color: 'from-purple-500 to-pink-500' },
     { title: 'Produtos em Estoque', value: `${totalStockItems} un.`, icon: Boxes, color: 'from-emerald-500 to-teal-500' },
-    { title: 'Pedidos Concluídos', value: totalOrders.length, icon: ClipboardList, color: 'from-amber-500 to-orange-500' },
-    { title: 'Total de Vendas', value: `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: TrendingUp, color: 'from-indigo-500 to-purple-500' }
+    { title: 'Pedidos Realizados', value: orders.length, icon: ClipboardList, color: 'from-amber-500 to-orange-500' },
+    { title: 'Faturamento Total', value: `R$ ${totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: TrendingUp, color: 'from-indigo-500 to-purple-500' }
   ]
 
   return (
     <div className="flex flex-col gap-8 text-left">
-      <div>
-        <h1 className="text-2xl font-black text-white tracking-tight">Painel Executivo</h1>
-        <p className="text-xs text-slate-500">Indicadores e visão geral de vendas da autopeças</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-black text-white tracking-tight">Painel Executivo</h1>
+          <p className="text-xs text-slate-500">Indicadores gerais e visão consolidada de vendas (PostgreSQL)</p>
+        </div>
+        <button
+          onClick={loadDashboardData}
+          disabled={loading}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-400 bg-slate-900 border border-slate-800 rounded-lg hover:text-white hover:bg-slate-800 transition-colors"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          Atualizar Dados
+        </button>
       </div>
 
-      {/* KPI Cards Grid */}
+      {/* Grid de Cards de Indicadores (KPIs) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
         {cards.map((card, index) => {
           const Icon = card.icon
@@ -75,40 +102,48 @@ export const Dashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Latest Activity / Orders */}
+        {/* Painel: Últimos Pedidos Realizados */}
         <div className="lg:col-span-2 bg-slate-900/40 border border-slate-900 rounded-3xl p-6 backdrop-blur-sm flex flex-col gap-4">
-          <div className="flex justify-between items-center pb-3 border-b border-slate-850">
+          <div className="flex justify-between items-center pb-3 border-b border-slate-800">
             <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider">Últimos Pedidos</h3>
-            <Link to="/admin/pedidos" className="text-xs font-bold text-indigo-400 hover:text-indigo-350 transition-colors">
-              Ver Todos
+            <Link to="/admin/pedidos" className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors">
+              Ver Todos ({orders.length})
             </Link>
           </div>
 
-          <div className="divide-y divide-slate-850">
-            {totalOrders.slice(0, 5).map((order) => (
-              <div key={order.id} className="py-3 flex justify-between items-center text-xs">
-                <div className="text-left">
-                  <span className="font-bold text-slate-200 font-mono block">{order.id}</span>
-                  <span className="text-slate-500">{order.customerName} • {order.date}</span>
+          <div className="divide-y divide-slate-800">
+            {orders.length > 0 ? (
+              orders.slice(0, 5).map((order) => (
+                <div key={order.id} className="py-3 flex justify-between items-center text-xs">
+                  <div className="text-left">
+                    <span className="font-bold text-slate-200 font-mono block">
+                      {(order as any).code || order.id}
+                    </span>
+                    <span className="text-slate-500">{order.customerName} • {order.date}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-right">
+                    <span className="font-mono text-slate-300 font-semibold">
+                      R$ {order.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                    <Badge variant={getStatusVariant(order.status)}>
+                      {order.status}
+                    </Badge>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 text-right">
-                  <span className="font-mono text-slate-350 font-semibold">
-                    R$ {order.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                  <Badge variant={getStatusVariant(order.status)}>
-                    {order.status}
-                  </Badge>
-                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-slate-500 text-xs">
+                Nenhum pedido registrado no banco de dados até o momento.
               </div>
-            ))}
+            )}
           </div>
         </div>
 
-        {/* Stock Status Summary */}
+        {/* Painel: Alerta de Estoque Crítico */}
         <div className="bg-slate-900/40 border border-slate-900 rounded-3xl p-6 backdrop-blur-sm flex flex-col gap-4">
-          <div className="flex justify-between items-center pb-3 border-b border-slate-850">
+          <div className="flex justify-between items-center pb-3 border-b border-slate-800">
             <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider">Estoques Críticos</h3>
-            <Link to="/admin/estoque" className="text-xs font-bold text-indigo-400 hover:text-indigo-350 transition-colors">
+            <Link to="/admin/estoque" className="text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors">
               Ver Estoque
             </Link>
           </div>
@@ -119,9 +154,9 @@ export const Dashboard = () => {
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>Existem {lowStockItems} produtos com níveis de estoque abaixo do mínimo configurado!</span>
               </div>
-              <div className="divide-y divide-slate-850">
-                {mockProducts
-                  .filter((p) => p.stock <= p.minStock)
+              <div className="divide-y divide-slate-800">
+                {products
+                  .filter((p) => (p.stock || 0) <= (p.minStock || 0))
                   .map((product) => (
                     <div key={product.id} className="py-2.5 flex justify-between items-center text-xs">
                       <span className="text-slate-300 font-medium truncate max-w-[150px]">{product.name}</span>

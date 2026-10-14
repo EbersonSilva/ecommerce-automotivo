@@ -130,7 +130,7 @@ export const Register: React.FC = () => {
         } else {
           setIdError('CPF não encontrado na base de dados. Realize seu cadastro ao lado.')
         }
-      } catch (localErr) {
+      } catch {
         setIdError('Erro ao buscar cadastro.')
       }
     } finally {
@@ -257,7 +257,7 @@ export const Register: React.FC = () => {
 
         alert('Cadastro realizado com sucesso!')
         navigate(fromCheckout ? '/checkout' : '/minha-conta')
-      } catch (localErr) {
+      } catch {
         alert(`Falha ao processar o cadastro: ${err.message}`)
       }
     } finally {

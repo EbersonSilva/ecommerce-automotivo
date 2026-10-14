@@ -1,25 +1,34 @@
 import { useState, useEffect } from 'react'
-import { mockProducts } from '../../mock/mockData'
 import type { Product } from '../../mock/mockData'
+import { getProducts } from '../../services/productService'
 import { Table } from '../../components/ui/Table'
 import { Badge, getStatusVariant } from '../../components/ui/Badge'
-import { AlertCircle, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { Button } from '../../components/ui/Button'
+import { AlertCircle, ArrowUpRight, ArrowDownRight, RefreshCw } from 'lucide-react'
 
 export const Stock = () => {
   const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const loadStock = async () => {
+    try {
+      setLoading(true)
+      const data = await getProducts()
+      setProducts(data)
+    } catch (err) {
+      console.error('Erro ao carregar estoque do PostgreSQL:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('custom-products')
-      setProducts(saved ? JSON.parse(saved) : mockProducts)
-    } catch {
-      setProducts(mockProducts)
-    }
+    loadStock()
   }, [])
 
-  // Stock summary math
-  const totalCostValue = products.reduce((acc, p) => acc + p.costPrice * p.stock, 0)
-  const totalSaleValue = products.reduce((acc, p) => acc + p.price * p.stock, 0)
+  // Métricas de valorização do estoque calculadas a partir do PostgreSQL
+  const totalCostValue = products.reduce((acc, p) => acc + (p.costPrice || 0) * (p.stock || 0), 0)
+  const totalSaleValue = products.reduce((acc, p) => acc + (p.price || 0) * (p.stock || 0), 0)
   const potentialProfit = totalSaleValue - totalCostValue
 
   const getStockStatus = (p: Product) => {
@@ -30,12 +39,24 @@ export const Stock = () => {
 
   return (
     <div className="flex flex-col gap-6 text-left">
-      <div>
-        <h1 className="text-2xl font-black text-white tracking-tight">Painel de Estoque</h1>
-        <p className="text-xs text-slate-500 font-medium">Controle de entradas, custos operacionais e margem de rentabilidade</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-black text-white tracking-tight">Painel de Estoque</h1>
+          <p className="text-xs text-slate-500 font-medium">Controle de entradas, custos operacionais e margem de rentabilidade (PostgreSQL)</p>
+        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={loadStock}
+          disabled={loading}
+          className="text-xs gap-1.5"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          Atualizar Estoque
+        </Button>
       </div>
 
-      {/* Stock Valuation Cards */}
+      {/* Cards de Valorização de Estoque */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div className="bg-slate-900/40 border border-slate-900 p-5 rounded-2xl flex flex-col gap-1 backdrop-blur-sm">
           <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Custo do Estoque Ativo</span>
@@ -70,7 +91,7 @@ export const Stock = () => {
         </div>
       </div>
 
-      {/* Stock Critical alerts bar */}
+      {/* Alerta de Estoque Crítico */}
       {products.some((p) => p.stock <= p.minStock) && (
         <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs px-4 py-3 rounded-2xl flex items-center gap-2">
           <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
@@ -78,7 +99,7 @@ export const Stock = () => {
         </div>
       )}
 
-      {/* Stock Grid Table */}
+      {/* Tabela de Estoque */}
       <Table headers={['Código', 'Produto', 'Custo (R$)', 'Venda (R$)', 'Qtd Disponível', 'Estoque Mín.', 'Status']}>
         {products.map((p) => {
           const status = getStockStatus(p)
@@ -107,10 +128,11 @@ export const Stock = () => {
                   {status}
                 </Badge>
               </td>
-            </tr>
+                        </tr>
           )
         })}
       </Table>
+
     </div>
   )
 }
