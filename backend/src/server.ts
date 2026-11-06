@@ -9,8 +9,15 @@ import couponRoutes from './routes/couponRoutes.js'
 import productRoutes from './routes/productRoutes.js'
 import orderRoutes from './routes/orderRoutes.js'
 import exchangeRoutes from './routes/exchangeRoutes.js'
+import reportRoutes from './routes/reportRoutes.js'
 
 
+
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // Carrega variáveis do arquivo .env
 dotenv.config()
@@ -20,7 +27,10 @@ const PORT = process.env.PORT || 3001
 
 // Middlewares essenciais
 app.use(cors()) // Permite que o frontend React acesse este backend
-app.use(express.json()) // Habilita o Express a receber dados no formato JSON (req.body)
+app.use(express.json({ limit: '15mb' })) // Habilita o Express a receber dados no formato JSON com suporte a upload base64
+app.use(express.urlencoded({ extended: true, limit: '15mb' }))
+// Serve arquivos estáticos da pasta pública de produtos (para visualização no navegador)
+app.use('/products', express.static(path.resolve(__dirname, '../../frontend/public/products')))
 
 // ROTA DE STATUS DA API
 app.get('/api/status', (req, res) => {
@@ -57,6 +67,7 @@ app.use('/api/clientes/:clienteId/cupons', couponRoutes)
 app.use('/api/cupons', couponRoutes)
 app.use('/api/produtos', productRoutes)
 app.use('/api/trocas', exchangeRoutes)
+app.use('/api/relatorios', reportRoutes)
 app.use('/api/clientes/:clienteId/trocas', exchangeRoutes)
 
 app.use('/api', orderRoutes)

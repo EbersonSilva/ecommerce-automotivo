@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { mockProducts } from '../../mock/mockData'
-import type { Product } from '../../mock/mockData'
+import { getProductById, createProduct, updateProduct, uploadProductImage } from '../../services/productService'
 import { Input } from '../../components/ui/Input'
 import { Select } from '../../components/ui/Select'
 import { Button } from '../../components/ui/Button'
-import { ArrowLeft, Save, ShoppingBag } from 'lucide-react'
+import { ArrowLeft, Save, ShoppingBag, Image as ImageIcon, Upload } from 'lucide-react'
+
 
 export const ProductForm = () => {
   const { id } = useParams<{ id: string }>()
@@ -13,6 +13,7 @@ export const ProductForm = () => {
   const isEdit = !!id
 
   // Form Fields State
+  const [code, setCode] = useState('')
   const [name, setName] = useState('')
   const [category, setCategory] = useState('Freios')
   const [manufacturer, setManufacturer] = useState('')
@@ -20,103 +21,126 @@ export const ProductForm = () => {
   const [costPrice, setCostPrice] = useState('')
   const [stock, setStock] = useState('')
   const [minStock, setMinStock] = useState('')
-  const [status, setStatus] = useState<'Ativo' | 'Inativo'>('Ativo')
   const [description, setDescription] = useState('')
   const [compatibilityInput, setCompatibilityInput] = useState('')
 
-  // Load existing data if edit mode
+  // Imagem State - Armazenamento de Caminho no Banco
+  const [image, setImage] = useState('/products/pastilha-freio.webp')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState('/products/pastilha-freio.webp')
+
+  const [loading, setLoading] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+
+  // Carrega dados se for modo de edição (RF0014)
   useEffect(() => {
     if (isEdit) {
-      try {
-        const saved = localStorage.getItem('custom-products')
-        const list = saved ? JSON.parse(saved) : mockProducts
-        const found = list.find((p: Product) => p.id === id)
-        
-        if (found) {
-          setName(found.name)
-          setCategory(found.category)
-          setManufacturer(found.manufacturer)
-          setPrice(String(found.price))
-          setCostPrice(String(found.costPrice))
-          setStock(String(found.stock))
-          setMinStock(String(found.minStock))
-          setStatus(found.status)
-          setDescription(found.description)
-          setCompatibilityInput(found.compatibility.join(', '))
-        }
-      } catch (err) {
-        console.error(err)
-      }
+      setLoading(true)
+      getProductById(id)
+        .then((found) => {
+          if (found) {
+            setCode(found.code)
+            setName(found.name)
+            setCategory(found.category)
+            setManufacturer(found.manufacturer)
+            setPrice(String(found.price))
+            setCostPrice(String(found.costPrice || '0'))
+            setStock(String(found.stock))
+            setMinStock(String(found.minStock))
+            setDescription(found.description || '')
+            setCompatibilityInput(Array.isArray(found.compatibility) ? found.compatibility.join(', ') : '')
+
+            const currentImg = found.image || '/products/pastilha-freio.webp'
+            setImage(currentImg)
+            setPreviewUrl(currentImg)
+          }
+        })
+        .catch((err) => {
+          console.error(err)
+          alert('Não foi possível carregar os dados da peça para edição.')
+        })
+        .finally(() => {
+          setLoading(false)
+        })
+    } else {
+      // Sugere um código SKU único para novos cadastros
+      setCode(`PEC-${Math.floor(1000 + Math.random() * 9000)}`)
     }
   }, [id, isEdit])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setImageFile(file)
+      setPreviewUrl(URL.createObjectURL(file))
+    }
+  }
+
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!name || !manufacturer || !price || !costPrice || !stock || !minStock) {
+    if (!code || !name || !manufacturer || !price || !costPrice || !stock || !minStock) {
       alert('Favor preencher todos os campos obrigatórios.')
       return
     }
 
-    // Convert compatibility input to string list
+    const numPrice = parseFloat(price)
+    const numCostPrice = parseFloat(costPrice)
+
+    // RN0012: Preço de venda deve ser maior ou igual ao custo
+    if (numPrice < numCostPrice) {
+      alert('Regra de Precificação (RN0012): O preço de venda não pode ser inferior ao preço de custo.')
+      return
+    }
+
     const compatibility = compatibilityInput
       .split(',')
       .map((item) => item.trim())
       .filter((item) => item !== '')
 
     try {
-      const saved = localStorage.getItem('custom-products')
-      const list: Product[] = saved ? JSON.parse(saved) : [...mockProducts]
+      setSubmitting(true)
 
-      if (isEdit) {
-        // Edit product
-        const updated = list.map((p) => {
-          if (p.id === id) {
-            return {
-              ...p,
-              name,
-              category,
-              manufacturer,
-              price: parseFloat(price),
-              costPrice: parseFloat(costPrice),
-              stock: parseInt(stock, 10),
-              minStock: parseInt(minStock, 10),
-              status,
-              description,
-              compatibility
-            }
-          }
-          return p
-        })
-        localStorage.setItem('custom-products', JSON.stringify(updated))
-        alert('Produto atualizado com sucesso!')
-      } else {
-        // Create new product
-        const newProduct: Product = {
-          id: String(list.length + 1),
-          code: `PEC-${String(list.length + 1).padStart(4, '0')}`,
-          name,
-          category,
-          manufacturer,
-          price: parseFloat(price),
-          costPrice: parseFloat(costPrice),
-          stock: parseInt(stock, 10),
-          minStock: parseInt(minStock, 10),
-          status,
-          description,
-          image: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><rect width="100" height="100" fill="%236366f1" rx="12"/><circle cx="50" cy="50" r="30" fill="none" stroke="white" stroke-width="4"/><path d="M30 50h40M50 30v40" stroke="white" stroke-width="4"/></svg>`, // Generic Indigo SVG
-          compatibility
-        }
-        list.push(newProduct)
-        localStorage.setItem('custom-products', JSON.stringify(list))
-        alert('Novo produto cadastrado com sucesso!')
+      let finalImagePath = image
+
+      // Se o usuário selecionou um arquivo local no computador, faz o upload físico
+      if (imageFile) {
+        finalImagePath = await uploadProductImage(imageFile)
       }
 
+      const payload = {
+        code,
+        name,
+        category,
+        manufacturer,
+        price: numPrice,
+        costPrice: numCostPrice,
+        stock: parseInt(stock, 10),
+        minStock: parseInt(minStock, 10),
+        description,
+        compatibility,
+        image: finalImagePath // Salva apenas o caminho relativo no banco (ex: /products/17290...-nome.png)
+      }
+
+      if (isEdit) {
+        await updateProduct(id, payload)
+        alert('Peça atualizada com sucesso no PostgreSQL!')
+      } else {
+        await createProduct(payload)
+        alert('Nova peça cadastrada com sucesso no PostgreSQL!')
+      }
       navigate('/admin/produtos')
-    } catch (err) {
+    } catch (err: any) {
       console.error(err)
-      alert('Falha ao gravar registro do produto.')
+      alert(err.message || 'Falha ao salvar produto no banco.')
+    } finally {
+      setSubmitting(false)
     }
+  }
+
+  if (loading) {
+    return <div className="text-center py-20 text-slate-400">Carregando dados da peça...</div>
   }
 
   return (
@@ -131,10 +155,12 @@ export const ProductForm = () => {
 
       <div>
         <h1 className="text-2xl font-black text-white tracking-tight">
-          {isEdit ? 'Editar Produto' : 'Cadastrar Produto'}
+          {isEdit ? 'Editar Peça Automotiva' : 'Cadastrar Peça Automotiva'}
         </h1>
         <p className="text-xs text-slate-500 font-medium">
-          {isEdit ? 'Atualize as especificações técnicas da peça automotiva' : 'Cadastre uma nova peça com seus respectivos custos, preços e estoques de segurança'}
+          {isEdit 
+            ? 'Atualize as especificações técnicas, imagem, preços e modelos compatíveis (PostgreSQL)' 
+            : 'Cadastre um novo componente com imagem, precificação e estoque de segurança (PostgreSQL)'}
         </p>
       </div>
 
@@ -146,6 +172,24 @@ export const ProductForm = () => {
             Especificações Gerais
           </h3>
 
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Código SKU / Part Number *"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              placeholder="Ex: PEC-1020"
+              disabled={isEdit}
+              required
+            />
+            <Input
+              label="Fabricante / Marca *"
+              value={manufacturer}
+              onChange={(e) => setManufacturer(e.target.value)}
+              placeholder="Ex: Cobreq, Bosch, Monroe"
+              required
+            />
+          </div>
+
           <Input
             label="Nome da Peça *"
             value={name}
@@ -154,31 +198,23 @@ export const ProductForm = () => {
             required
           />
 
-          <div className="grid grid-cols-2 gap-4">
-            <Select
-              label="Categoria"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              options={[
-                { value: 'Freios', label: 'Freios' },
-                { value: 'Filtros', label: 'Filtros' },
-                { value: 'Ignição', label: 'Ignição' },
-                { value: 'Suspensão', label: 'Suspensão' },
-                { value: 'Iluminação', label: 'Iluminação' },
-                { value: 'Correias', label: 'Correias' }
-              ]}
-            />
-            <Input
-              label="Fabricante *"
-              value={manufacturer}
-              onChange={(e) => setManufacturer(e.target.value)}
-              placeholder="Ex: Bosch"
-              required
-            />
-          </div>
+          <Select
+            label="Categoria / Sistema Automotivo"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            options={[
+              { value: 'Freios', label: 'Freios' },
+              { value: 'Filtros', label: 'Filtros' },
+              { value: 'Ignição', label: 'Ignição' },
+              { value: 'Suspensão', label: 'Suspensão' },
+              { value: 'Iluminação', label: 'Iluminação' },
+              { value: 'Correias', label: 'Correias' },
+              { value: 'Motor', label: 'Motor' }
+            ]}
+          />
 
           <div className="w-full flex flex-col gap-1.5 text-left">
-            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Descrição do Produto</label>
+            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Descrição Técnica</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -195,69 +231,120 @@ export const ProductForm = () => {
           />
         </div>
 
-        {/* Right Side: Financials, status and stock limits */}
-        <div className="bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-6 justify-between h-full">
-          <div className="flex flex-col gap-6">
-            <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider pb-3 border-b border-slate-850">
-              Precificação e Estoque
-            </h3>
-
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Preço de Custo (R$) *"
-                value={costPrice}
-                onChange={(e) => setCostPrice(e.target.value)}
-                placeholder="0.00"
-                type="number"
-                step="0.01"
-                required
-              />
-              <Input
-                label="Preço de Venda (R$) *"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="0.00"
-                type="number"
-                step="0.01"
-                required
-              />
+        {/* Right Side: Image Upload & Financials */}
+        <div className="flex flex-col gap-8">
+          {/* Card: Upload de Imagem (Apenas o caminho é salvo no banco) */}
+          <div className="bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-5">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-850">
+              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                <ImageIcon className="w-4.5 h-4.5 text-indigo-400" />
+                Imagem da Peça
+              </h3>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Qtd em Estoque *"
-                value={stock}
-                onChange={(e) => setStock(e.target.value)}
-                placeholder="0"
-                type="number"
-                required
-              />
-              <Input
-                label="Estoque Mínimo (Alerta) *"
-                value={minStock}
-                onChange={(e) => setMinStock(e.target.value)}
-                placeholder="0"
-                type="number"
-                required
-              />
-            </div>
+            <div className="flex flex-col sm:flex-row gap-5 items-center">
+              {/* Visual Preview */}
+              <div className="w-28 h-28 flex-shrink-0 bg-slate-950/80 border-2 border-dashed border-slate-800 rounded-2xl p-2 flex items-center justify-center relative overflow-hidden group">
+                {previewUrl ? (
+                  <img
+                    src={previewUrl}
+                    alt="Preview da peça"
+                    className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+                  />
+                ) : (
+                  <ImageIcon className="w-8 h-8 text-slate-600" />
+                )}
+              </div>
 
-            <Select
-              label="Status do Item"
-              value={status}
-              onChange={(e) => setStatus(e.target.value as 'Ativo' | 'Inativo')}
-              options={[
-                { value: 'Ativo', label: 'Ativo (Disponível na Loja)' },
-                { value: 'Inativo', label: 'Inativo (Oculto da Loja)' }
-              ]}
-            />
+              {/* Upload Controls */}
+              <div className="flex flex-col gap-2.5 flex-1 w-full text-left">
+                <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                  Upload de Arquivo (JPG, PNG, WEBP)
+                </label>
+                <input
+                  type="file"
+                  id="product-image-file"
+                  accept="image/png, image/jpeg, image/webp, image/svg+xml"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="product-image-file"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/60 text-slate-200 text-xs font-bold cursor-pointer transition-all hover:border-indigo-500/50 hover:text-white"
+                >
+                  <Upload className="w-4 h-4 text-indigo-400" />
+                  {imageFile ? `Arquivo: ${imageFile.name.slice(0, 18)}...` : 'Subir Imagem do Computador'}
+                </label>
+
+                
+              </div>
+            </div>
           </div>
 
-          <div className="flex justify-end mt-8 border-t border-slate-850 pt-6">
-            <Button type="submit" className="gap-2 px-8 py-3">
-              <Save className="w-4 h-4" />
-              Salvar Cadastro
-            </Button>
+          {/* Card: Precificação e Estoque */}
+          <div className="bg-slate-900/40 border border-slate-900 p-6 md:p-8 rounded-3xl backdrop-blur-sm shadow-2xl flex flex-col gap-6 justify-between">
+            <div className="flex flex-col gap-6">
+              <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wider pb-3 border-b border-slate-850">
+                Precificação e Estoque
+              </h3>
+
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Preço de Custo (R$) *"
+                  value={costPrice}
+                  onChange={(e) => setCostPrice(e.target.value)}
+                  placeholder="0.00"
+                  type="number"
+                  step="0.01"
+                  required
+                />
+                <Input
+                  label="Preço de Venda (R$) *"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="0.00"
+                  type="number"
+                  step="0.01"
+                  required
+                />
+              </div>
+
+              {/* Indicador de Margem Projetada */}
+              {parseFloat(price) > 0 && parseFloat(costPrice) > 0 && (
+                <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-xs flex justify-between items-center text-indigo-300">
+                  <span>Margem de Lucro Bruta:</span>
+                  <strong className="font-mono text-sm text-emerald-400">
+                    +R$ {(parseFloat(price) - parseFloat(costPrice)).toFixed(2)} ({(((parseFloat(price) - parseFloat(costPrice)) / parseFloat(costPrice)) * 100).toFixed(1)}%)
+                  </strong>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Qtd em Estoque *"
+                  value={stock}
+                  onChange={(e) => setStock(e.target.value)}
+                  placeholder="0"
+                  type="number"
+                  required
+                />
+                <Input
+                  label="Estoque Mínimo (Alerta) *"
+                  value={minStock}
+                  onChange={(e) => setMinStock(e.target.value)}
+                  placeholder="0"
+                  type="number"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-8 border-t border-slate-850 pt-6">
+              <Button type="submit" disabled={submitting} className="gap-2 px-8 py-3">
+                <Save className="w-4 h-4" />
+                {submitting ? 'Salvando...' : 'Salvar no PostgreSQL'}
+              </Button>
+            </div>
           </div>
         </div>
       </form>
