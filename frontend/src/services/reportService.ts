@@ -41,7 +41,27 @@ export async function getSalesByCategoryReport(
   categories: string[] = [],
   userRole?: string
 ): Promise<SalesReportResponse> {
-  const role = userRole || localStorage.getItem('user-role') || 'admin'
+  // Verifica se há um cliente/usuário logado por CPF na sessão
+  let loggedCpf = ''
+  let derivedRole = localStorage.getItem('user-role') || 'admin'
+
+  try {
+    const savedCustomer = localStorage.getItem('logged-customer')
+    if (savedCustomer) {
+      const parsed = JSON.parse(savedCustomer)
+      loggedCpf = String(parsed.cpf || '').replace(/\D/g, '')
+      const isAdminCpf =
+        loggedCpf === '99999999999' ||
+        String(parsed.role || '').toUpperCase() === 'ADMIN'
+      if (!userRole) {
+        derivedRole = isAdminCpf ? 'admin' : 'cliente'
+      }
+    }
+  } catch {
+    // Ignora erro de parse
+  }
+
+  const role = userRole || derivedRole
   const params = new URLSearchParams({
     dataInicio: startDate,
     dataFim: endDate
@@ -53,12 +73,19 @@ export async function getSalesByCategoryReport(
 
   const clientStart = performance.now()
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-user-role': role
+  }
+
+  // Envia o CPF logado apenas se não for uma troca manual de perfil no seletor de teste
+  if (loggedCpf && !userRole) {
+    headers['x-user-cpf'] = loggedCpf
+  }
+
   const response = await fetch(`${API_URL}/vendas-categorias?${params.toString()}`, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-user-role': role
-    }
+    headers
   })
 
   const data = await response.json().catch(() => ({}))

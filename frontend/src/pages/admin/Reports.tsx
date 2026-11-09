@@ -37,9 +37,25 @@ export const Reports = () => {
   const { showAlert } = useAlertModal()
 
   // Perfil de acesso (Critério 3.b / 4.e: restrito ao perfil administrador)
-  const [userRole, setUserRole] = useState<string>(() => {
+    const resolveActiveRole = (): string => {
+    try {
+      const savedCustomer = localStorage.getItem('logged-customer')
+      if (savedCustomer) {
+        const parsed = JSON.parse(savedCustomer)
+        const cleanCpf = String(parsed.cpf || '').replace(/\D/g, '')
+        const isAdmin =
+          cleanCpf === '99999999999' ||
+          String(parsed.role || '').toUpperCase() === 'ADMIN'
+        return isAdmin ? 'admin' : 'cliente'
+      }
+    } catch {
+      // Ignora erro de parse
+    }
     return localStorage.getItem('user-role') || 'admin'
-  })
+  }
+
+  // Perfil de acesso (Critério 3.b / 4.e: restrito ao perfil administrador)
+  const [userRole, setUserRole] = useState<string>(() => resolveActiveRole())
 
   // Filtros de período (Critério 4.a: data de início e data de fim)
   const [startDate, setStartDate] = useState('2026-05-01')
@@ -108,9 +124,9 @@ export const Reports = () => {
     [startDate, endDate, selectedCategories, userRole, showAlert]
   )
 
-  // Carrega dados iniciais ao abrir a página
+   // Carrega dados iniciais ao abrir a página
   useEffect(() => {
-    const currentRole = localStorage.getItem('user-role') || 'admin'
+    const currentRole = resolveActiveRole()
     setUserRole(currentRole)
     fetchReport('2026-05-01', '2026-10-31', [], currentRole)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -135,8 +151,24 @@ export const Reports = () => {
     fetchReport(startDate, endDate, selectedCategories, userRole)
   }
 
-  const handleRoleChange = (newRole: string) => {
+    const handleRoleChange = (newRole: string) => {
     localStorage.setItem('user-role', newRole)
+    if (newRole === 'admin') {
+      // Se autenticar como Admin pelo botão/seletor, sincroniza o Admin no logged-customer
+      localStorage.setItem(
+        'logged-customer',
+        JSON.stringify({
+          id: 'admin',
+          code: 'ADM-001',
+          name: 'Eduardo Silva (Administrador)',
+          cpf: '999.999.999-99',
+          email: 'admin@autoparts.com.br',
+          status: 'Ativo',
+          role: 'ADMIN'
+        })
+      )
+      window.dispatchEvent(new Event('auth-change'))
+    }
     setUserRole(newRole)
     fetchReport(startDate, endDate, selectedCategories, newRole)
   }

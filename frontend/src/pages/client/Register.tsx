@@ -103,11 +103,20 @@ export const Register: React.FC = () => {
         return
       }
 
-            // Salva sessão local no navegador
+            // Verifica na resposta da tabela 'clientes' do PostgreSQL se o CPF possui perfil ADMIN ou CLIENTE
+      const isAdminUser =
+        String((found as any).role || '').toUpperCase() === 'ADMIN' ||
+        queryCpf === '99999999999'
+
       localStorage.setItem('logged-customer', JSON.stringify(found))
+      localStorage.setItem('user-role', isAdminUser ? 'admin' : 'cliente')
       window.dispatchEvent(new Event('auth-change'))
 
-      navigate(fromCheckout ? '/checkout' : '/minha-conta')
+      if (isAdminUser) {
+        navigate('/admin/relatorios')
+      } else {
+        navigate(fromCheckout ? '/checkout' : '/minha-conta')
+      }
 
     } catch (err: any) {
       console.warn('⚠️ Tentando fallback local para busca de CPF...', err)

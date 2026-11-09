@@ -54,8 +54,21 @@ export const getSalesByCategoryReport = async (req: Request, res: Response): Pro
   const startTime = Date.now()
 
   try {
-    // Critério 3.b / 4.e: Restringir o acesso ao gráfico ao perfil administrador
-    const roleHeader = String(req.headers['x-user-role'] || req.query.perfil || 'admin').toLowerCase()
+       // Critério 3.b / 4.e: Restringir o acesso ao gráfico ao perfil administrador (validando também na tabela clientes)
+    const userCpfHeader = String(req.headers['x-user-cpf'] || '').replace(/\D/g, '')
+    let roleHeader = String(req.headers['x-user-role'] || req.query.perfil || 'admin').toLowerCase()
+
+    if (userCpfHeader) {
+      await query(`ALTER TABLE clientes ADD COLUMN IF NOT EXISTS perfil VARCHAR(20) DEFAULT 'CLIENTE'`)
+      const dbUser = await query(
+        `SELECT COALESCE(perfil, 'CLIENTE') AS perfil FROM clientes WHERE REPLACE(REPLACE(cpf, '.', ''), '-', '') = $1 LIMIT 1`,
+        [userCpfHeader]
+      )
+      if (dbUser.rows.length > 0) {
+        roleHeader = String(dbUser.rows[0].perfil).toLowerCase()
+      }
+    }
+
     if (roleHeader !== 'admin' && roleHeader !== 'administrador') {
       res.status(403).json({
         error: 'Acesso negado. A análise de histórico de vendas é exclusiva para o perfil Administrador.'
@@ -192,6 +205,13 @@ export const seedSalesReportData = async (_req: Request, res: Response): Promise
 
   try {
     await client.query('BEGIN')
+
+    await client.query(`ALTER TABLE clientes ADD COLUMN IF NOT EXISTS perfil VARCHAR(20) DEFAULT 'CLIENTE'`)
+    await client.query(`
+      INSERT INTO clientes (codigo, nome, cpf, email, telefone, status, perfil)
+      SELECT 'ADM-001', 'Eduardo Silva (Administrador)', '999.999.999-99', 'admin@autoparts.com.br', '11999999999', 'Ativo', 'ADMIN'
+      WHERE NOT EXISTS (SELECT 1 FROM clientes WHERE REPLACE(REPLACE(cpf, '.', ''), '-', '') = '99999999999')
+    `)
 
     // 1. Garante que existam produtos das 4 categorias principais com códigos conhecidos
     const baseProducts = [

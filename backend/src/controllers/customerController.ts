@@ -80,11 +80,29 @@ export const getCustomerById = async (req: Request, res: Response): Promise<void
 // ------------------------------------------------------------------------------
 // 3. BUSCAR CLIENTE POR CPF (GET /api/clientes/cpf/:cpf)
 // ------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
+// 3. BUSCAR CLIENTE/USUÁRIO POR CPF (GET /api/clientes/cpf/:cpf)
+// ------------------------------------------------------------------------------
 export const getCustomerByCpf = async (req: Request, res: Response): Promise<void> => {
   try {
     const rawCpf = String(req.params.cpf || '')
-    // Remove pontuação caso venha formatado (ex: "123.456.789-00" -> "12345678900")
     const cleanCpf = rawCpf.replace(/\D/g, '')
+
+    // Garante que a coluna 'perfil' exista na tabela clientes e que o Admin (CPF 999.999.999-99) esteja salvo no PostgreSQL
+    await query(`ALTER TABLE clientes ADD COLUMN IF NOT EXISTS perfil VARCHAR(20) DEFAULT 'CLIENTE'`)
+    const adminCheck = await query(
+      `SELECT id FROM clientes WHERE REPLACE(REPLACE(cpf, '.', ''), '-', '') = '99999999999' LIMIT 1`
+    )
+    if (adminCheck.rows.length === 0) {
+      await query(
+        `INSERT INTO clientes (codigo, nome, cpf, email, telefone, status, perfil)
+         VALUES ('ADM-001', 'Eduardo Silva (Administrador)', '999.999.999-99', 'admin@autoparts.com.br', '11999999999', 'Ativo', 'ADMIN')`
+      )
+    } else {
+      await query(
+        `UPDATE clientes SET perfil = 'ADMIN' WHERE REPLACE(REPLACE(cpf, '.', ''), '-', '') = '99999999999'`
+      )
+    }
 
     const sql = `
       SELECT 
@@ -94,7 +112,8 @@ export const getCustomerByCpf = async (req: Request, res: Response): Promise<voi
         cpf, 
         email, 
         telefone as "phone", 
-        status
+        status,
+        COALESCE(perfil, 'CLIENTE') as "role"
       FROM clientes 
       WHERE REPLACE(REPLACE(REPLACE(cpf, '.', ''), '-', ''), '/', '') = $1
          OR cpf = $2
@@ -103,7 +122,7 @@ export const getCustomerByCpf = async (req: Request, res: Response): Promise<voi
     const result = await query(sql, [cleanCpf, rawCpf])
 
     if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Nenhum cliente cadastrado com este CPF.' })
+      res.status(404).json({ error: 'Nenhum usuário/cliente cadastrado com este CPF.' })
       return
     }
 
