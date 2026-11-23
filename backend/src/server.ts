@@ -10,6 +10,7 @@ import productRoutes from './routes/productRoutes.js'
 import orderRoutes from './routes/orderRoutes.js'
 import exchangeRoutes from './routes/exchangeRoutes.js'
 import reportRoutes from './routes/reportRoutes.js'
+import chatbotRoutes from './routes/chatbotRoutes.js'
 
 
 
@@ -69,6 +70,7 @@ app.use('/api/produtos', productRoutes)
 app.use('/api/trocas', exchangeRoutes)
 app.use('/api/relatorios', reportRoutes)
 app.use('/api/clientes/:clienteId/trocas', exchangeRoutes)
+app.use('/api/chatbot', chatbotRoutes)
 
 app.use('/api', orderRoutes)
 
